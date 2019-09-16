@@ -1,9 +1,8 @@
-CC=gcc
-CFLAGS=-Wall -Werror -O0 -g
+#CC=gcc -g -Wall -Werror -std=gnu99
+CC=gcc -g -Wall -Werror
 
-myshell:
-	$(CC) $(CFLAGS) -o myshell myshell.c
+all: shell.c
+	$(CC) -o myshell shell.c
 
 clean:
 	rm myshell
-	rm -r myshell.dSYM
