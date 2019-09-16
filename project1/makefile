@@ -6,3 +6,4 @@ all: shell.c
 
 clean:
 	rm myshell
+	rm -r myshell.dSYM
