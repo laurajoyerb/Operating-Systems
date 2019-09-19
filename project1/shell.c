@@ -3,32 +3,43 @@
 #include <libc.h>
 
 #define MAX_INPUT 1024
-#define MAX_TOKENS 200
+#define MAX_TOKENS 256
 
 int main(int argc, char* argv[]) {
+  char input[MAX_INPUT];
+
   bool print = true;
   if (argc > 1) {
     print = (strcmp(argv[1],"-n") != 0);
   }
-  int tokenCount = 0;
-  char input[MAX_INPUT];
-  char* tokens[MAX_TOKENS];
-  char* ptr = NULL;
 
-  while (1) {
-    if (print) { printf("my_shell$ "); }
-    fgets(input, MAX_INPUT, stdin);
-    tokenCount = 0;
-    ptr = strtok(input, " ");
-    while (ptr != NULL) {
-      tokens[tokenCount] = ptr;
-      tokenCount++;
-      ptr = strtok(NULL, " ");
-    }
+  while (true)
+  {
+      if (print) { printf("my_shell$ "); }
+      fgets(input, sizeof(input), stdin);
 
-    for (int i = 0; i < tokenCount; i++) {
-      printf("%s\n", tokens[i]);
-    }
+      char *args[MAX_TOKENS];
+      char **next = args;
+      char *ptr = strtok(input, " \n");
+      while (ptr != NULL)
+      {
+          *next++ = ptr;
+          ptr = strtok(NULL, " \n");
+      }
+      *next = NULL;
+
+      pid_t pid = fork();
+
+      if (pid == 0) {
+        if (execvp(args[0], args) < 0) {
+              if (print) {printf("ERROR: Could not execute command \n");}
+        } else {
+          if (print) {printf("executed command\n");}
+        }
+        exit(0);
+      } else {
+        wait(NULL);
+      }
   }
   return 0;
 }
