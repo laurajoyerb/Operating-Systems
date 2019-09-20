@@ -6,6 +6,7 @@
 #define MAX_CONSOLE_TOKENS 32
 
 int main(int argc, char* argv[], char** envp) {
+  bool run = true;
   char input[MAX_CONSOLE_INPUT];
 
   // checks for supressing output
@@ -15,39 +16,42 @@ int main(int argc, char* argv[], char** envp) {
   }
 
   // loops infinitely
-  while (true)
+  while (run)
   {
       if (print) { printf("my_shell$ "); }
 
       // grabs input from user
-      fgets(input, sizeof(input), stdin);
-
-      char *args[MAX_CONSOLE_TOKENS];
-      char **iter = args;
-      char *ptr = strtok(input, " \n"); // returns pointer to the next token
-      while (ptr != NULL) // as sooon as ptr is null, we have reached the end of the line
-      {
-          *iter++ = ptr;
-          ptr = strtok(NULL, " \n");
-      }
-      *iter = NULL; // need a null at the end to work properly with execvp
-
-      // fork needed to not overrun the current program
-      // ie, parent program is processing input and running the shell
-      // the parent process creates child processes to actually execute the commands
-      pid_t pid = fork();
-
-      if (pid == 0) {
-        // child
-        if (execvp(args[0], args) < 0) {
-              if (print) {printf("ERROR: Command could not be executed \n");}
-        } else {
-          // parent
-          if (print) {printf("Executed command successfully\n");}
+      if (fgets(input, sizeof(input), stdin) != NULL) {
+        char *args[MAX_CONSOLE_TOKENS];
+        char **iter = args;
+        char *ptr = strtok(input, " \n"); // returns pointer to the next token
+        while (ptr != NULL) // as sooon as ptr is null, we have reached the end of the line
+        {
+            *iter++ = ptr;
+            ptr = strtok(NULL, " \n");
         }
-        exit(0);
+        *iter = NULL; // need a null at the end to work properly with execvp
+
+        // fork needed to not overrun the current program
+        // ie, parent program is processing input and running the shell
+        // the parent process creates child processes to actually execute the commands
+        pid_t pid = fork();
+
+        if (pid == 0) {
+          // child
+          if (execvp(args[0], args) < 0) {
+                if (print) {printf("ERROR: Command could not be executed \n");}
+          } else {
+            // parent
+            if (print) {printf("Executed command successfully\n");}
+          }
+          exit(0);
+        } else {
+          wait(NULL);
+        }
       } else {
-        wait(NULL);
+        run = false;
+        printf("\n");
       }
   }
   return 0;
