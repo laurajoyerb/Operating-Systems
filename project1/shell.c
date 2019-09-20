@@ -2,11 +2,11 @@
 #include <stdbool.h>
 #include <libc.h>
 
-#define MAX_INPUT 1024
-#define MAX_TOKENS 256
+#define MAX_CONSOLE_INPUT 512
+#define MAX_CONSOLE_TOKENS 32
 
-int main(int argc, char* argv[]) {
-  char input[MAX_INPUT];
+int main(int argc, char* argv[], char** envp) {
+  char input[MAX_CONSOLE_INPUT];
 
   // checks for supressing output
   bool print = true;
@@ -22,7 +22,7 @@ int main(int argc, char* argv[]) {
       // grabs input from user
       fgets(input, sizeof(input), stdin);
 
-      char *args[MAX_TOKENS];
+      char *args[MAX_CONSOLE_TOKENS];
       char **iter = args;
       char *ptr = strtok(input, " \n"); // returns pointer to the next token
       while (ptr != NULL) // as sooon as ptr is null, we have reached the end of the line
@@ -40,10 +40,10 @@ int main(int argc, char* argv[]) {
       if (pid == 0) {
         // child
         if (execvp(args[0], args) < 0) {
-              if (print) {printf("ERROR: Could not execute command \n");}
+              if (print) {printf("ERROR: Command could not be executed \n");}
         } else {
           // parent
-          if (print) {printf("executed command\n");}
+          if (print) {printf("Executed command successfully\n");}
         }
         exit(0);
       } else {
