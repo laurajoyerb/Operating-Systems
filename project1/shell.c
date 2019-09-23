@@ -18,10 +18,35 @@ int main(int argc, char* argv[], char** envp) {
   // loops infinitely
   while (run)
   {
+      // clears any previous input
+      memset(input,'\0', MAX_CONSOLE_INPUT);
+
       if (print) { printf("my_shell$ "); }
+
+      // special characters
+      bool file_in = false;
+      bool file_out = false;
+      bool pipe = false;
+      bool and = false;
 
       // grabs input from user
       if (fgets(input, sizeof(input), stdin) != NULL) {
+        // flags for special characters
+        for (int i = 0; i < sizeof(input); i++) {
+          if (input[i] == '<') {
+            file_in = true;
+          }
+          if (input[i] == '>') {
+            file_out = true;
+          }
+          if (input[i] == '|') {
+            pipe = true;
+          }
+          if (input[i] == '&') {
+            and = true;
+          }
+        }
+        printf("\n");
         char *args[MAX_CONSOLE_TOKENS];
         char **iter = args;
         char *ptr = strtok(input, " \n"); // returns pointer to the next token
@@ -50,6 +75,7 @@ int main(int argc, char* argv[], char** envp) {
           wait(NULL);
         }
       } else {
+        // if fgets returns null (from ctrl + d)
         run = false;
         printf("\n");
       }
