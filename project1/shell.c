@@ -7,16 +7,27 @@
 
 char *args[MAX_CONSOLE_TOKENS];
 
-void parser(char* input, char* delim) {
+int parser(char* input, char* delim, bool fileio) {
+  int commands = 0;
   char **iter = args;
 
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
+    if (ptr[0] == '>') {
+      break;
+    }
+      commands++;
       *iter++ = ptr;
       ptr = strtok(NULL, delim);
   }
-  *iter = NULL; // need a null at the end to work properly with execvp
+  // if (fileio) {
+  //   // removes last argument if using a file for input / output (ie, last arg isn't an arg for execvp)
+  //   *--iter = NULL;
+  // } else {
+    *iter = NULL; // need a null at the end to work properly with execvp
+  // }
+  return commands;
 }
 
 int main(int argc, char* argv[], char** envp) {
@@ -62,24 +73,27 @@ int main(int argc, char* argv[], char** envp) {
         }
         printf("\n");
 
+        int fin;
+        int cmds;
+
         // changing up delimiters based on flags
         if (file_in) {
-          parser(input, "< \n");
+          cmds = parser(input, "< \n", true);
         } else if (file_out) {
-          parser(input, "> \n");
+          cmds = parser(input, " \n", true);
         } else if (pipe) {
-          parser(input, "| \n");
+          cmds = parser(input, "| \n", false);
         } else if (and) {
-          parser(input, "& \n");
+          cmds = parser(input, "& \n", false);
         } else {
-          parser(input, " \n");
+          cmds = parser(input, " \n", false);
         }
-
-        printf("\n");
-        for (int i = 0; i < MAX_CONSOLE_TOKENS; i++) {
-          printf("%s ", args[i]);
-        }
-        printf("\n");
+        //
+        // printf("\n");
+        // for (int i = 0; i < cmds; i++) {
+        //   printf("%s ", args[i]);
+        // }
+        // printf("\n");
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
@@ -88,14 +102,20 @@ int main(int argc, char* argv[], char** envp) {
 
         if (pid == 0) {
           // child
+          if (file_out) {
+            close(1);
+            fin = open("output.txt", O_WRONLY | O_CREAT);
+            dup2(fin, 1);
+          }
+
           if (execvp(args[0], args) < 0) {
                 if (print) {printf("ERROR: Command could not be executed \n");}
           } else {
-            // parent
             if (print) {printf("Executed command successfully\n");}
           }
           exit(0);
         } else {
+          // parent
           wait(NULL);
         }
       } else {
