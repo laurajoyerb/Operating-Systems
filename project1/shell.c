@@ -7,14 +7,43 @@
 
 char *args[MAX_CONSOLE_TOKENS];
 
+char* out_file;
+
 int parser(char* input, char* delim) {
+  // counts actual commands (ie, not input/output file redirects)
   int commands = 0;
+
+  // tells if next command is an input/output file instead of an argument
+  bool next_in = false;
+  bool next_out = false;
+
   char **iter = args;
 
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-      if (ptr[0] != '>' && ptr[0] != '<' && ptr[0] != '|' && ptr[0] != '&') {
+      if (next_in) { // grabs input file redirect name
+        next_in = false;
+        int fin = open(ptr, O_RDONLY);
+        char *filecmds = (char *) calloc(100, sizeof(char));
+        printf("opened file: %d\n", fin);
+        read(fin, filecmds, 256);
+        printf("Those bytes are as follows: %s\n", filecmds);
+        close(fin);
+        char* in_ptr = strtok(filecmds, delim);
+        while (in_ptr != NULL) {
+          commands++;
+          *iter++ = in_ptr;
+          in_ptr = strtok(NULL, delim);
+        }
+      } else if (next_out) { // grabs output file redirect name
+        out_file = ptr;
+        next_out = false;
+      } else if (ptr[0] == '>') { // flags next string as output file name and skips adding char to args
+        next_out = true;
+      } else if (ptr[0] == '<') { // flags next string as input file name and skips adding char to args
+        next_in = true;
+      } else if (ptr[0] != '|' && ptr[0] != '&') { // if normal command, save to args and increment
         commands++;
         *iter++ = ptr;
       }
@@ -28,22 +57,25 @@ int parser(char* input, char* delim) {
 bool valid_input(char* input) {
   int ins = 0;
   int outs = 0;
-  for (int i = 0; i < MAX_CONSOLE_INPUT - 1; i++) {
+  for (int i = 0; i < MAX_CONSOLE_INPUT - 1; i++) { // to max minus 1 to avoid seg faulting on and check
     if (input[i] == '<') {
       ins++;
-      if (i == 0) {
+      if (i == 0) { // shouldn't be at beginning of line
         return false;
-      } else if (input[i] == '&' && input[i+1] != '\n') {
+      } else if (input[i+1] == '\n') { // also shouldn't be at end
         return false;
       }
     }
     if(input[i] == '>') {
+      // same checks as ins
       outs++;
-      if (input[i+1] == '\n') {
+      if (i == 0) { // shouldn't be at beginning of line
+        return false;
+      } else if (input[i+1] == '\n') { // also shouldn't be at end
         return false;
       }
     }
-    if (input[i] == '&' && input[i+1] != '\n') {
+    if (input[i] == '&' && input[i+1] != '\n') { // has to be at end of line
       return false;
     }
   }
@@ -100,16 +132,14 @@ int main(int argc, char* argv[], char** envp) {
         }
         printf("\n");
 
-        int fin;
-
         int cmds = parser(input, " \n");
 
-        printf("\n");
-        for (int i = 0; i < cmds; i++) {
-          printf("%s ", args[i]);
-        }
-        printf("\n");
-        printf("commands: %d\n", cmds);
+        // printf("\n");
+        // for (int i = 0; i < cmds; i++) {
+        //   printf("%s ", args[i]);
+        // }
+        // printf("\n");
+        // printf("commands: %d\n", cmds);
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
@@ -117,22 +147,15 @@ int main(int argc, char* argv[], char** envp) {
 
         pid_t pid = fork();
 
-        if (pid == 0) {
+        if (pid == 0 && cmds > 0) {
           // child
-          char *nofile[MAX_CONSOLE_TOKENS];
-          for (int i = 0; i < cmds - 1; i++) {
-            nofile[i] = args[i];
-          }
-
           if (file_out) {
             close(1);
-            fin = open(args[cmds-1], O_WRONLY | O_CREAT);
-            dup2(fin, 1);
-          } else {
-            nofile[cmds - 1] = args[cmds - 1];
+            int fout = open(out_file, O_WRONLY | O_CREAT);
+            dup2(fout, 1);
           }
 
-          if (execvp(args[0], nofile) < 0) {
+          if (execvp(args[0], args) < 0) {
                 if (print) {printf("ERROR: Command could not be executed \n");}
           } else {
             if (print) {printf("Executed command successfully\n");}
