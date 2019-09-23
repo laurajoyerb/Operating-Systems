@@ -5,6 +5,20 @@
 #define MAX_CONSOLE_INPUT 512
 #define MAX_CONSOLE_TOKENS 32
 
+char *args[MAX_CONSOLE_TOKENS];
+
+void parser(char* input, char* delim) {
+  char **iter = args;
+
+  char *ptr = strtok(input, delim); // returns pointer to the next token
+  while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
+  {
+      *iter++ = ptr;
+      ptr = strtok(NULL, delim);
+  }
+  *iter = NULL; // need a null at the end to work properly with execvp
+}
+
 int main(int argc, char* argv[], char** envp) {
   bool run = true;
   char input[MAX_CONSOLE_INPUT];
@@ -47,15 +61,25 @@ int main(int argc, char* argv[], char** envp) {
           }
         }
         printf("\n");
-        char *args[MAX_CONSOLE_TOKENS];
-        char **iter = args;
-        char *ptr = strtok(input, " \n"); // returns pointer to the next token
-        while (ptr != NULL) // as sooon as ptr is null, we have reached the end of the line
-        {
-            *iter++ = ptr;
-            ptr = strtok(NULL, " \n");
+
+        // changing up delimiters based on flags
+        if (file_in) {
+          parser(input, "< \n");
+        } else if (file_out) {
+          parser(input, "> \n");
+        } else if (pipe) {
+          parser(input, "| \n");
+        } else if (and) {
+          parser(input, "& \n");
+        } else {
+          parser(input, " \n");
         }
-        *iter = NULL; // need a null at the end to work properly with execvp
+
+        printf("\n");
+        for (int i = 0; i < MAX_CONSOLE_TOKENS; i++) {
+          printf("%s ", args[i]);
+        }
+        printf("\n");
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
