@@ -80,7 +80,7 @@ int main(int argc, char* argv[], char** envp) {
       // grabs input from user
       if (fgets(input, sizeof(input), stdin) != NULL) {
         if (!valid_input(input)) {
-          printf("Invalid input\n");
+          if (print) {printf("ERROR: Invalid input\n");}
           continue;
         }
         // flags for special characters
