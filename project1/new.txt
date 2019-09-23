@@ -1,8 +1,0 @@
-README.md
-command.txt
-hello.txt
-makefile
-myshell
-myshell.dSYM
-new.txt
-shell.c

@@ -7,14 +7,14 @@
 
 char *args[MAX_CONSOLE_TOKENS];
 
-int parser(char* input, char* delim, bool fileio) {
+int parser(char* input, char* delim) {
   int commands = 0;
   char **iter = args;
 
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-      if (ptr[0] != '>') {
+      if (ptr[0] != '>' && ptr[0] != '<' && ptr[0] != '|' && ptr[0] != '&') {
         commands++;
         *iter++ = ptr;
       }
@@ -23,6 +23,34 @@ int parser(char* input, char* delim, bool fileio) {
   printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
   return commands;
+}
+
+bool valid_input(char* input) {
+  int ins = 0;
+  int outs = 0;
+  for (int i = 0; i < MAX_CONSOLE_INPUT - 1; i++) {
+    if (input[i] == '<') {
+      ins++;
+      if (i == 0) {
+        return false;
+      } else if (input[i] == '&' && input[i+1] != '\n') {
+        return false;
+      }
+    }
+    if(input[i] == '>') {
+      outs++;
+      if (input[i+1] == '\n') {
+        return false;
+      }
+    }
+    if (input[i] == '&' && input[i+1] != '\n') {
+      return false;
+    }
+  }
+  if (ins > 1 || outs > 1) {
+    return false;
+  }
+  return true;
 }
 
 int main(int argc, char* argv[], char** envp) {
@@ -51,6 +79,10 @@ int main(int argc, char* argv[], char** envp) {
 
       // grabs input from user
       if (fgets(input, sizeof(input), stdin) != NULL) {
+        if (!valid_input(input)) {
+          printf("Invalid input\n");
+          continue;
+        }
         // flags for special characters
         for (int i = 0; i < sizeof(input); i++) {
           if (input[i] == '<') {
@@ -69,20 +101,8 @@ int main(int argc, char* argv[], char** envp) {
         printf("\n");
 
         int fin;
-        int cmds;
 
-        // changing up delimiters based on flags
-        if (file_in) {
-          cmds = parser(input, "< \n", true);
-        } else if (file_out) {
-          cmds = parser(input, " \n", true);
-        } else if (pipe) {
-          cmds = parser(input, "| \n", false);
-        } else if (and) {
-          cmds = parser(input, "& \n", false);
-        } else {
-          cmds = parser(input, " \n", false);
-        }
+        int cmds = parser(input, " \n");
 
         printf("\n");
         for (int i = 0; i < cmds; i++) {
