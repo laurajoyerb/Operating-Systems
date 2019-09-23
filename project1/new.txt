@@ -4,6 +4,5 @@ hello.txt
 makefile
 myshell
 myshell.dSYM
-output.txt
-shell.c
+new.txt
 shell.c

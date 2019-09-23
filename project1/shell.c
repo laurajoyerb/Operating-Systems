@@ -14,19 +14,14 @@ int parser(char* input, char* delim, bool fileio) {
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-    if (ptr[0] == '>') {
-      break;
-    }
-      commands++;
-      *iter++ = ptr;
+      if (ptr[0] != '>') {
+        commands++;
+        *iter++ = ptr;
+      }
       ptr = strtok(NULL, delim);
   }
-  // if (fileio) {
-  //   // removes last argument if using a file for input / output (ie, last arg isn't an arg for execvp)
-  //   *--iter = NULL;
-  // } else {
-    *iter = NULL; // need a null at the end to work properly with execvp
-  // }
+  printf("outta the while loop\n");
+  *iter = NULL; // need a null at the end to work properly with execvp
   return commands;
 }
 
@@ -88,27 +83,36 @@ int main(int argc, char* argv[], char** envp) {
         } else {
           cmds = parser(input, " \n", false);
         }
-        //
-        // printf("\n");
-        // for (int i = 0; i < cmds; i++) {
-        //   printf("%s ", args[i]);
-        // }
-        // printf("\n");
+
+        printf("\n");
+        for (int i = 0; i < cmds; i++) {
+          printf("%s ", args[i]);
+        }
+        printf("\n");
+        printf("commands: %d\n", cmds);
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
+
         pid_t pid = fork();
 
         if (pid == 0) {
           // child
-          if (file_out) {
-            close(1);
-            fin = open("output.txt", O_WRONLY | O_CREAT);
-            dup2(fin, 1);
+          char *nofile[MAX_CONSOLE_TOKENS];
+          for (int i = 0; i < cmds - 1; i++) {
+            nofile[i] = args[i];
           }
 
-          if (execvp(args[0], args) < 0) {
+          if (file_out) {
+            close(1);
+            fin = open(args[cmds-1], O_WRONLY | O_CREAT);
+            dup2(fin, 1);
+          } else {
+            nofile[cmds - 1] = args[cmds - 1];
+          }
+
+          if (execvp(args[0], nofile) < 0) {
                 if (print) {printf("ERROR: Command could not be executed \n");}
           } else {
             if (print) {printf("Executed command successfully\n");}
