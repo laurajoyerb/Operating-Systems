@@ -22,7 +22,7 @@ int parser(char* input, char* delim) {
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-      if (next_in) { // grabs input file redirect name
+      if (next_in) { // grabs input file args
         next_in = false;
         int fin = open(ptr, O_RDONLY);
         char *filecmds = (char *) calloc(100, sizeof(char));
@@ -32,8 +32,15 @@ int parser(char* input, char* delim) {
         close(fin);
         char* in_ptr = strtok(filecmds, delim);
         while (in_ptr != NULL) {
-          commands++;
-          *iter++ = in_ptr;
+          if (next_out) {
+            out_file = in_ptr;
+            next_out = false;
+          } else if (in_ptr[0] == '>') {
+            next_out = true;
+          } else {
+            commands++;
+            *iter++ = in_ptr;
+          }
           in_ptr = strtok(NULL, delim);
         }
       } else if (next_out) { // grabs output file redirect name
@@ -49,7 +56,7 @@ int parser(char* input, char* delim) {
       }
       ptr = strtok(NULL, delim);
   }
-  printf("outta the while loop\n");
+  // printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
   return commands;
 }

@@ -1,1 +1,1 @@
-hello.txt
+hello.txt > output.txt
