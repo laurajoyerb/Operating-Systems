@@ -108,7 +108,7 @@ int main(int argc, char* argv[], char** envp) {
 
       // special characters
       bool file_out = false;
-      bool pipe = false;
+      bool has_pipe = false;
       bool and = false;
 
       // grabs input from user
@@ -123,7 +123,7 @@ int main(int argc, char* argv[], char** envp) {
             file_out = true;
           }
           if (input[i] == '|') {
-            pipe = true;
+            has_pipe = true;
           }
           if (input[i] == '&') {
             and = true;
@@ -145,20 +145,25 @@ int main(int argc, char* argv[], char** envp) {
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
-        int pipefd[2];
-        int pipe(int pipefd[2]);
 
-        // char string[] = "hello world\n";
+        int pipefd[2];
+
         char fixed_str[] = "forgeeks.org";
         char input_str[100];
 
-        if (pipe(pipefd)==-1)
-        {
-            fprintf(stderr, "Pipe Failed" );
-            return 1;
-        }
+        if (has_pipe) {
+          // int pipe(int pipefd[2]);
 
-        scanf("%s", input_str);
+          // char string[] = "hello world\n";
+
+          if (pipe(pipefd)==-1)
+          {
+              fprintf(stderr, "Pipe Failed" );
+              return 1;
+          }
+
+          scanf("%s", input_str);
+        }
 
         pid_t pid = fork();
 
@@ -171,36 +176,49 @@ int main(int argc, char* argv[], char** envp) {
         // Parent process
         else if (pid > 0)
         {
-            close(pipefd[0]);  // Close reading end of first pipe
-
-            // Write input string and close writing end of first
-            // pipe.
+          if(has_pipe) {
+            close(pipefd[0]);  // Close reading end of pipe
             write(pipefd[1], input_str, strlen(input_str)+1);
             close(pipefd[1]);
+          }
+
+          wait(NULL);
         }
 
         // child process
        else
        {
-           close(pipefd[1]);  // Close writing end of first pipe
+         if (has_pipe) {
+           close(pipefd[1]);  // Close writing end of pipe
 
-           // Read a string using first pipe
            char concat_str[100];
            read(pipefd[0], concat_str, 100);
 
-           // Concatenate a fixed string with it
            int k = strlen(concat_str);
            int i;
            for (i=0; i<strlen(fixed_str); i++)
                concat_str[k++] = fixed_str[i];
 
-           concat_str[k] = '\0';   // string ends with '\0'
+           concat_str[k] = '\0';
 
-           // Close both reading ends
            close(pipefd[0]);
 
            printf("string: %s\n", concat_str);
            exit(0);
+         } else {
+           if (file_out) { // can only occur for last argument
+             close(1);
+             int fout = open(out_file, O_WRONLY | O_CREAT);
+             dup2(fout, 1);
+           }
+
+           if (execvp(args[0], args) < 0) {
+                 if (print) {printf("ERROR: Command could not be executed \n");}
+           } else {
+             if (print) {printf("Executed command successfully\n");}
+           }
+           exit(0);
+         }
        }
 
         // if (pid == 0) {
@@ -211,17 +229,17 @@ int main(int argc, char* argv[], char** envp) {
         //
         //   printf("wrote: %s\n", string);
         //
-        //   if (file_out) { // can only occur for last argument
-        //     close(1);
-        //     int fout = open(out_file, O_WRONLY | O_CREAT);
-        //     dup2(fout, 1);
-        //   }
+          // if (file_out) { // can only occur for last argument
+          //   close(1);
+          //   int fout = open(out_file, O_WRONLY | O_CREAT);
+          //   dup2(fout, 1);
+          // }
         //
-        //   if (execvp(args[0], args) < 0) {
-        //         if (print) {printf("ERROR: Command could not be executed \n");}
-        //   } else {
-        //     if (print) {printf("Executed command successfully\n");}
-        //   }
+          // if (execvp(args[0], args) < 0) {
+          //       if (print) {printf("ERROR: Command could not be executed \n");}
+          // } else {
+          //   if (print) {printf("Executed command successfully\n");}
+          // }
         //   exit(0);
         // } else {
         //   // parent
