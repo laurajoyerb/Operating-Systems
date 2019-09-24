@@ -1,6 +1,11 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <libc.h>
+#include <unistd.h>
+#include<stdlib.h>
+#include<sys/types.h>
+#include<string.h>
+#include<sys/wait.h>
 
 #define MAX_CONSOLE_INPUT 512
 #define MAX_CONSOLE_TOKENS 32
@@ -41,7 +46,7 @@ int parser(char* input, char* delim) {
         next_out = true;
       } else if (ptr[0] == '<') { // flags next string as input file name and skips adding char to args
         next_in = true;
-      } else if (ptr[0] != '|' && ptr[0] != '&') { // if normal command, save to args and increment
+      } else if (ptr[0] != '&') { // if normal command, save to args and increment
         commands++;
         *iter++ = ptr;
       }
@@ -126,7 +131,7 @@ int main(int argc, char* argv[], char** envp) {
         }
         printf("\n");
 
-        int cmds = parser(input, " \n");
+        parser(input, " \n");
 
         // printf("\n");
         // for (int i = 0; i < cmds; i++) {
@@ -140,27 +145,93 @@ int main(int argc, char* argv[], char** envp) {
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
+        int pipefd[2];
+        int pipe(int pipefd[2]);
+
+        // char string[] = "hello world\n";
+        char fixed_str[] = "forgeeks.org";
+        char input_str[100];
+
+        if (pipe(pipefd)==-1)
+        {
+            fprintf(stderr, "Pipe Failed" );
+            return 1;
+        }
+
+        scanf("%s", input_str);
 
         pid_t pid = fork();
 
-        if (pid == 0 && cmds > 0) {
-          // child
-          if (file_out) { // can only occur for last argument
-            close(1);
-            int fout = open(out_file, O_WRONLY | O_CREAT);
-            dup2(fout, 1);
-          }
-
-          if (execvp(args[0], args) < 0) {
-                if (print) {printf("ERROR: Command could not be executed \n");}
-          } else {
-            if (print) {printf("Executed command successfully\n");}
-          }
-          exit(0);
-        } else {
-          // parent
-          wait(NULL);
+        if (pid < 0)
+        {
+            fprintf(stderr, "Fork Failed" );
+            return 1;
         }
+
+        // Parent process
+        else if (pid > 0)
+        {
+            close(pipefd[0]);  // Close reading end of first pipe
+
+            // Write input string and close writing end of first
+            // pipe.
+            write(pipefd[1], input_str, strlen(input_str)+1);
+            close(pipefd[1]);
+        }
+
+        // child process
+       else
+       {
+           close(pipefd[1]);  // Close writing end of first pipe
+
+           // Read a string using first pipe
+           char concat_str[100];
+           read(pipefd[0], concat_str, 100);
+
+           // Concatenate a fixed string with it
+           int k = strlen(concat_str);
+           int i;
+           for (i=0; i<strlen(fixed_str); i++)
+               concat_str[k++] = fixed_str[i];
+
+           concat_str[k] = '\0';   // string ends with '\0'
+
+           // Close both reading ends
+           close(pipefd[0]);
+
+           printf("string: %s\n", concat_str);
+           exit(0);
+       }
+
+        // if (pid == 0) {
+        //   // child
+        //   close(pipefd[0]);
+        //   write(pipefd[1], string, (strlen(string)+1));
+        //   close(pipefd[1]);
+        //
+        //   printf("wrote: %s\n", string);
+        //
+        //   if (file_out) { // can only occur for last argument
+        //     close(1);
+        //     int fout = open(out_file, O_WRONLY | O_CREAT);
+        //     dup2(fout, 1);
+        //   }
+        //
+        //   if (execvp(args[0], args) < 0) {
+        //         if (print) {printf("ERROR: Command could not be executed \n");}
+        //   } else {
+        //     if (print) {printf("Executed command successfully\n");}
+        //   }
+        //   exit(0);
+        // } else {
+        //   // parent
+        //   close(pipefd[1]);
+        //   char readbuffer[80];
+        //   bytes = read(pipefd[0], readbuffer, 80);
+        //   printf("Received string: %s also bytes: %d\n", readbuffer, bytes);
+        //   wait(NULL);
+        //   close(pipefd[0]);
+        // }
       } else {
         // if fgets returns null (from ctrl + d)
         run = false;
