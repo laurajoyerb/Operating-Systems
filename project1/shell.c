@@ -23,38 +23,35 @@ int parser(char* input, char* delim) {
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
       if (next_in) { // grabs input file args
+        printf("next in\n");
         next_in = false;
         int fin = open(ptr, O_RDONLY);
         char *filecmds = (char *) calloc(100, sizeof(char));
-        printf("opened file: %d\n", fin);
         read(fin, filecmds, 256);
-        printf("Those bytes are as follows: %s\n", filecmds);
         close(fin);
         char* in_ptr = strtok(filecmds, delim);
         while (in_ptr != NULL) {
-          if (next_out) {
-            out_file = in_ptr;
-            next_out = false;
-          } else if (in_ptr[0] == '>') {
-            next_out = true;
-          } else {
             commands++;
             *iter++ = in_ptr;
-          }
           in_ptr = strtok(NULL, delim);
         }
       } else if (next_out) { // grabs output file redirect name
         out_file = ptr;
+        printf("setting out_file\n");
         next_out = false;
       } else if (ptr[0] == '>') { // flags next string as output file name and skips adding char to args
         next_out = true;
+        printf("ptr[0] == '>'\n");
       } else if (ptr[0] == '<') { // flags next string as input file name and skips adding char to args
         next_in = true;
+        printf("ptr[0] == '<'\n");
       } else if (ptr[0] != '|' && ptr[0] != '&') { // if normal command, save to args and increment
         commands++;
         *iter++ = ptr;
+        printf("regular\n");
       }
       ptr = strtok(NULL, delim);
+      printf("ptr: %s\n", ptr);
   }
   // printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
@@ -111,7 +108,6 @@ int main(int argc, char* argv[], char** envp) {
       if (print) { printf("my_shell$ "); }
 
       // special characters
-      bool file_in = false;
       bool file_out = false;
       bool pipe = false;
       bool and = false;
@@ -124,9 +120,6 @@ int main(int argc, char* argv[], char** envp) {
         }
         // flags for special characters
         for (int i = 0; i < sizeof(input); i++) {
-          if (input[i] == '<') {
-            file_in = true;
-          }
           if (input[i] == '>') {
             file_out = true;
           }
@@ -141,12 +134,14 @@ int main(int argc, char* argv[], char** envp) {
 
         int cmds = parser(input, " \n");
 
-        // printf("\n");
-        // for (int i = 0; i < cmds; i++) {
-        //   printf("%s ", args[i]);
-        // }
-        // printf("\n");
-        // printf("commands: %d\n", cmds);
+        printf("\n");
+        for (int i = 0; i < cmds; i++) {
+          printf("%s ", args[i]);
+        }
+        printf("\n");
+        printf("commands: %d\n", cmds);
+
+        printf("output file: %s\n", out_file);
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
@@ -156,7 +151,7 @@ int main(int argc, char* argv[], char** envp) {
 
         if (pid == 0 && cmds > 0) {
           // child
-          if (file_out) {
+          if (file_out) { // can only occur for last argument
             close(1);
             int fout = open(out_file, O_WRONLY | O_CREAT);
             dup2(fout, 1);
