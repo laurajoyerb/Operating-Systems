@@ -23,7 +23,6 @@ int parser(char* input, char* delim) {
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
       if (next_in) { // grabs input file args
-        printf("next in\n");
         next_in = false;
         int fin = open(ptr, O_RDONLY);
         char *filecmds = (char *) calloc(100, sizeof(char));
@@ -37,21 +36,16 @@ int parser(char* input, char* delim) {
         }
       } else if (next_out) { // grabs output file redirect name
         out_file = ptr;
-        printf("setting out_file\n");
         next_out = false;
       } else if (ptr[0] == '>') { // flags next string as output file name and skips adding char to args
         next_out = true;
-        printf("ptr[0] == '>'\n");
       } else if (ptr[0] == '<') { // flags next string as input file name and skips adding char to args
         next_in = true;
-        printf("ptr[0] == '<'\n");
       } else if (ptr[0] != '|' && ptr[0] != '&') { // if normal command, save to args and increment
         commands++;
         *iter++ = ptr;
-        printf("regular\n");
       }
       ptr = strtok(NULL, delim);
-      printf("ptr: %s\n", ptr);
   }
   // printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
@@ -134,14 +128,14 @@ int main(int argc, char* argv[], char** envp) {
 
         int cmds = parser(input, " \n");
 
-        printf("\n");
-        for (int i = 0; i < cmds; i++) {
-          printf("%s ", args[i]);
-        }
-        printf("\n");
-        printf("commands: %d\n", cmds);
-
-        printf("output file: %s\n", out_file);
+        // printf("\n");
+        // for (int i = 0; i < cmds; i++) {
+        //   printf("%s ", args[i]);
+        // }
+        // printf("\n");
+        // printf("commands: %d\n", cmds);
+        //
+        // printf("output file: %s\n", out_file);
 
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
