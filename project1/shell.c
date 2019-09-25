@@ -12,49 +12,43 @@
 
 char *args[MAX_CONSOLE_TOKENS];
 
+// each index is a separate command (ie, cat numbers.txt | sort would result in args_array[0] = "cat numbers.txt", args_array[1] = "sort")
+char** args_array[MAX_CONSOLE_TOKENS];
 char* out_file;
 
-int parser(char* input, char* delim) {
-  // counts actual commands (ie, not input/output file redirects)
+void parser(char* input, char* delim) {
   int commands = 0;
-
   // tells if next command is an input/output file instead of an argument
-  bool next_in = false;
   bool next_out = false;
+
+  // counts "separate commands" in args_array
+  int args_index = 0;
 
   char **iter = args;
 
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-      if (next_in) { // grabs input file args
-        next_in = false;
-        int fin = open(ptr, O_RDONLY);
-        char *filecmds = (char *) calloc(100, sizeof(char));
-        read(fin, filecmds, 256);
-        close(fin);
-        char* in_ptr = strtok(filecmds, delim);
-        while (in_ptr != NULL) {
-            commands++;
-            *iter++ = in_ptr;
-          in_ptr = strtok(NULL, delim);
-        }
-      } else if (next_out) { // grabs output file redirect name
+      if (next_out) { // grabs output file redirect name
         out_file = ptr;
         next_out = false;
       } else if (ptr[0] == '>') { // flags next string as output file name and skips adding char to args
         next_out = true;
-      } else if (ptr[0] == '<') { // flags next string as input file name and skips adding char to args
-        next_in = true;
-      } else if (ptr[0] != '&') { // if normal command, save to args and increment
-        commands++;
+      } else if (ptr[0] == '|') {
+        args_array[args_index] = args;
+        memset(args, '\0', MAX_CONSOLE_TOKENS);
+        *iter -= commands;
+        args_index++;
+      } else if (ptr[0] != '&' && ptr[0] != '<') { // if normal command, save to args and increment
         *iter++ = ptr;
+        commands++;
       }
       ptr = strtok(NULL, delim);
   }
   // printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
-  return commands;
+  args_array[args_index] = args; // adds last set of commands to args array
+  return;
 }
 
 bool valid_input(char* input) {
@@ -103,6 +97,8 @@ int main(int argc, char* argv[], char** envp) {
   {
       // clears any previous input
       memset(input,'\0', MAX_CONSOLE_INPUT);
+      memset(args, '\0', MAX_CONSOLE_TOKENS);
+      memset(args_array, 0, MAX_CONSOLE_TOKENS);
 
       if (print) { printf("my_shell$ "); }
 
@@ -133,11 +129,13 @@ int main(int argc, char* argv[], char** envp) {
 
         parser(input, " \n");
 
-        // printf("\n");
-        // for (int i = 0; i < cmds; i++) {
-        //   printf("%s ", args[i]);
+        // for (int j = 0; j <= 1; j++) {
+        //   printf("\n");
+        //   for (int i = 0; i < 1; i++) {
+        //     printf("%s ", args_array[j][i]);
+        //   }
+        //   printf("\n");
         // }
-        // printf("\n");
         // printf("commands: %d\n", cmds);
         //
         // printf("output file: %s\n", out_file);
@@ -194,7 +192,7 @@ int main(int argc, char* argv[], char** envp) {
              dup2(fout, 1);
            }
 
-           if (execvp(args[0], args) < 0) {
+           if (execvp(args_array[0][0], args_array[0]) < 0) {
                  if (print) {printf("ERROR: Command could not be executed \n");}
            } else {
              if (print) {printf("Executed command successfully\n");}
