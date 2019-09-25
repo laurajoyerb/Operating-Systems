@@ -11,6 +11,8 @@
 #define MAX_CONSOLE_TOKENS 32
 
 char *args[MAX_CONSOLE_TOKENS];
+// counts "separate commands" in args_array
+int args_index = 0;
 
 // each index is a separate command (ie, cat numbers.txt | sort would result in args_array[0] = "cat numbers.txt", args_array[1] = "sort")
 char** args_array[MAX_CONSOLE_TOKENS];
@@ -20,9 +22,6 @@ void parser(char* input, char* delim) {
   int commands = 0;
   // tells if next command is an input/output file instead of an argument
   bool next_out = false;
-
-  // counts "separate commands" in args_array
-  int args_index = 0;
 
   char **iter = args;
 
@@ -36,7 +35,6 @@ void parser(char* input, char* delim) {
         next_out = true;
       } else if (ptr[0] == '|') {
         args_array[args_index] = args;
-        memset(args, '\0', MAX_CONSOLE_TOKENS);
         *iter -= commands;
         args_index++;
       } else if (ptr[0] != '&' && ptr[0] != '<') { // if normal command, save to args and increment
@@ -48,6 +46,9 @@ void parser(char* input, char* delim) {
   // printf("outta the while loop\n");
   *iter = NULL; // need a null at the end to work properly with execvp
   args_array[args_index] = args; // adds last set of commands to args array
+  // printf("args_array[0][0]: %s\n", args_array[0][0]);
+  // if (args_index >= 1)
+  //   printf("args_array[1][0]: %s\n", args_array[1][0]);
   return;
 }
 
@@ -139,67 +140,76 @@ int main(int argc, char* argv[], char** envp) {
         // printf("commands: %d\n", cmds);
         //
         // printf("output file: %s\n", out_file);
+        for (int i = 0; i <= args_index; i++) {
+          // int pipefd[2];
+          // char input_str[100];
+          //
+          // if (has_pipe) { // only do setup if using a pipe
+          //   if (pipe(pipefd)==-1)
+          //   {
+          //       fprintf(stderr, "Pipe Failed" );
+          //       return 1;
+          //   }
+          //   scanf("%s", input_str);
+          // }
 
-        int pipefd[2];
-        char input_str[100];
+          // fork needed to not overrun the current program
+          // ie, parent program is processing input and running the shell
+          // the parent process creates child processes to actually execute the commands
+          pid_t pid = fork();
 
-        if (has_pipe) { // only do setup if using a pipe
-          if (pipe(pipefd)==-1)
+          if (pid < 0)
           {
-              fprintf(stderr, "Pipe Failed" );
+              fprintf(stderr, "Fork could not be completed" );
               return 1;
           }
-          scanf("%s", input_str);
-        }
+          // Parent process
+          else if (pid > 0)
+          {
+            // if(has_pipe) {
+            //   close(pipefd[0]);  // Close reading end of pipe
+            //   write(pipefd[1], input_str, strlen(input_str)+1);
+            //   close(pipefd[1]);
+            // }
 
-        // fork needed to not overrun the current program
-        // ie, parent program is processing input and running the shell
-        // the parent process creates child processes to actually execute the commands
-        pid_t pid = fork();
-
-        if (pid < 0)
-        {
-            fprintf(stderr, "Fork could not be completed" );
-            return 1;
-        }
-        // Parent process
-        else if (pid > 0)
-        {
-          if(has_pipe) {
-            close(pipefd[0]);  // Close reading end of pipe
-            write(pipefd[1], input_str, strlen(input_str)+1);
-            close(pipefd[1]);
+            wait(NULL); // so child process finishes first
           }
-
-          wait(NULL); // so child process finishes first
-        }
-        // child process
-       else
-       {
-         if (has_pipe) {
-           close(pipefd[1]);  // Close writing end of pipe
-
-           char concat_str[100];
-           read(pipefd[0], concat_str, 100);
-           close(pipefd[0]);
-
-           printf("string: %s\n", concat_str);
-           exit(0);
-         } else {
-           if (file_out) { // can only occur for last argument
-             close(1);
-             int fout = open(out_file, O_WRONLY | O_CREAT);
-             dup2(fout, 1);
-           }
-
-           if (execvp(args_array[0][0], args_array[0]) < 0) {
-                 if (print) {printf("ERROR: Command could not be executed \n");}
+          // child process
+         else
+         {
+           if (has_pipe && false) {
+            //  close(pipefd[1]);  // Close writing end of pipe
+             //
+            //  char concat_str[100];
+            //  read(pipefd[0], concat_str, 100);
+            //  close(pipefd[0]);
+             //
+            //  printf("string: %s\n", concat_str);
+            //  exit(0);
            } else {
-             if (print) {printf("Executed command successfully\n");}
-           }
-           exit(0);
-         }
-       }
+             if (file_out) { // can only occur for last argument
+               close(1);
+               int fout = open(out_file, O_WRONLY | O_CREAT);
+               dup2(fout, 1);
+              //  printf("stdout is shut off\n");
+             }
+
+            //  printf("executing a thing: %s\n", args_array[0][0]);
+
+
+             int foo = execvp(args_array[i][0], args_array[i]);
+
+             printf(": %d\n", foo);
+
+             if (foo < 0) {
+                   if (print) {printf("ERROR: Command could not be executed \n");}
+             } else {
+               if (print) {printf("Executed command successfully\n");}
+             }
+             exit(0);
+           } // child executes if no pipe
+         } // checking pid for parent or child
+       } // for loop with args_index
       } else {
         // if fgets returns null (from ctrl + d)
         run = false;
