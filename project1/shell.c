@@ -1,11 +1,14 @@
 #include <stdio.h>
 #include <stdbool.h>
-#include <libc.h>
 #include <unistd.h>
-#include<stdlib.h>
-#include<sys/types.h>
-#include<string.h>
-#include<sys/wait.h>
+#include <string.h>
+#include <pthread.h>
+#include <stdlib.h>
+#include <sys/types.h>
+#include <string.h>
+#include <sys/wait.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 
 #define MAX_CONSOLE_INPUT 512
 #define MAX_CONSOLE_TOKENS 32
@@ -47,7 +50,8 @@ void parser(char* input, char* delim) {
 bool valid_input(char* input) {
   int ins = 0;
   int outs = 0;
-  for (int i = 0; i < MAX_CONSOLE_INPUT - 1; i++) { // to max minus 1 to avoid seg faulting on and check
+  int i;
+  for (i = 0; i < MAX_CONSOLE_INPUT - 1; i++) { // to max minus 1 to avoid seg faulting on and check
     if (input[i] == '<') {
       ins++;
       if (i == 0) { // shouldn't be at beginning of line
@@ -116,35 +120,32 @@ int main(int argc, char* argv[], char** envp) {
           //   scanf("%s", input_str);
           // }
 
-          // fork needed to not overrun the current program
-          // ie, parent program is processing input and running the shell
-          // the parent process creates child processes to actually execute the commands
-          pid_t pid = fork();
+        // fork needed to not overrun the current program
+        // ie, parent program is processing input and running the shell
+        // the parent process creates child processes to actually execute the commands
+        pid_t pid = fork();
 
-          if (pid < 0)
-          {
-            // error with forking
-            fprintf(stderr, "Fork could not be completed" );
-            return 1;
+        if (pid < 0) {
+          // error with forking
+          fprintf(stderr, "Fork could not be completed" );
+          return 1;
+        }
+        else if (pid == 0) { // child
+          if (file_out) { // can only occur for last argument
+            close(1);
+            open(out_file, O_WRONLY | O_CREAT | O_APPEND); // automatically goes to file id 1
           }
-          else if (pid == 0)
-          { // child
-            if (file_out) { // can only occur for last argument
-              close(1);
-              open(out_file, O_WRONLY | O_CREAT | O_APPEND); // automatically goes to file id 1
-            }
 
-            if (execvp(args[0], args) < 0) {
-                  if (print) {printf("ERROR: Command could not be executed \n");}
-            } else {
-              if (print) {printf("Executed command successfully\n");}
-            }
-            exit(0);
+          if (execvp(args[0], args) < 0) {
+                if (print) {printf("ERROR: Command could not be executed \n");}
+          } else {
+            if (print) {printf("Executed command successfully\n");}
           }
-         else
-         { // parent process
-           wait(NULL); // so child process finishes first
-         } // checking pid for parent or child
+          exit(0);
+        }
+        else { // parent process
+          wait(NULL); // so child process finishes first
+        } // checking pid for parent or child
       } else {
         // if fgets returns null (from ctrl + d)
         run = false;
