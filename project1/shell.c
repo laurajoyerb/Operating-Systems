@@ -19,7 +19,7 @@ char* out_file;
 bool print;
 bool file_out;
 
-void execute(char* argv[], int fin, int fout) {
+void execute(char* fargv[], int fin, int fout) {
   int pipefd[2];
   pipe(pipefd);
 
@@ -40,7 +40,7 @@ void execute(char* argv[], int fin, int fout) {
       close(fout);
     }
 
-    int exec = execvp(argv[0], argv);
+    int exec = execvp(fargv[0], fargv);
     if (exec < 0) {
       if (print)
         printf("ERROR: Could not execute command\n");
@@ -122,6 +122,8 @@ int main(int argc, char* argv[], char** envp) {
   bool run = true; // breaks after ctrl + d
   char input[MAX_CONSOLE_INPUT]; // command line input from user
 
+  char* fargv[MAX_CONSOLE_TOKENS];
+
   // checks for supressing output
   print = true;
   if (argc > 1) {
@@ -134,6 +136,7 @@ int main(int argc, char* argv[], char** envp) {
       // clears any previous input
       memset(input,'\0', MAX_CONSOLE_INPUT);
       memset(args, '\0', MAX_CONSOLE_TOKENS);
+      memset(fargv, '\0', MAX_CONSOLE_TOKENS);
       file_out = false;
 
       if (print) { printf("my_shell$ "); }
@@ -169,18 +172,18 @@ int main(int argc, char* argv[], char** envp) {
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
 
-        char* argv[MAX_CONSOLE_TOKENS];
+        // char* argv[MAX_CONSOLE_TOKENS];
         int index = 0; // index for each individual word
 
         bool has_pipe = false;
 
         for (int i = 0; i < cmds; i++) {
           if (args[i][0] != '|') {
-            argv[index] = args[i];
+            fargv[index] = args[i];
             index++;
           } else {
             has_pipe = true;
-            execute(argv, 0, 1);
+            execute(fargv, 0, 1);
             index = 0;
           }
         }
@@ -189,7 +192,7 @@ int main(int argc, char* argv[], char** envp) {
         if (file_out) {
           fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
         }
-        execute(argv, 0, fout);
+        execute(fargv, 0, fout);
 
       } else {
         // if fgets returns null (from ctrl + d)
