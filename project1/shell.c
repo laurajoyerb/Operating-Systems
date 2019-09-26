@@ -76,11 +76,6 @@ int parser(char* input, char* delim) {
   }
   *iter = NULL; // need a null at the end to work properly with execvp
 
-  // for (int i = 0; i < commands; i++) {
-  //   printf("%s ", args[commands]);
-  // }
-  // printf("\n");
-
   // args now holds all strings from command line
   // ie, args = {"cat", "hello.txt", "|", "sort", "numbers.txt"};
   return commands;
@@ -121,7 +116,6 @@ bool valid_input(char* input) {
 int main(int argc, char* argv[], char** envp) {
   bool run = true; // breaks after ctrl + d
   char input[MAX_CONSOLE_INPUT]; // command line input from user
-
   char* fargv[MAX_CONSOLE_TOKENS];
 
   // checks for supressing output
@@ -150,29 +144,10 @@ int main(int argc, char* argv[], char** envp) {
 
         int cmds = parser(input, " \n"); // parses input into args
 
-        //
-        // for (int i = 0; i < cmds; i++) {
-        //   printf("%s ", args[cmds]);
-        // }
-        // printf("\n");
-
-          // int pipefd[2];
-          // char input_str[100];
-          //
-          // if (has_pipe) { // only do setup if using a pipe
-          //   if (pipe(pipefd)==-1)
-          //   {
-          //       fprintf(stderr, "Pipe Failed" );
-          //       return 1;
-          //   }
-          //   scanf("%s", input_str);
-          // }
-
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
 
-        // char* argv[MAX_CONSOLE_TOKENS];
         int index = 0; // index for each individual word
 
         bool has_pipe = false;
