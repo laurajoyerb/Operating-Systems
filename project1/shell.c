@@ -16,9 +16,43 @@
 char *args[MAX_CONSOLE_TOKENS];
 char* out_file;
 
+bool print;
 bool file_out;
 
-void parser(char* input, char* delim) {
+void execute(char* argv[], int fin, int fout) {
+  int pipefd[2];
+  pipe(pipefd);
+
+  pid_t pid = fork();
+
+  if (pid < 0) {
+    // error with forking
+    if (print)
+      printf("Fork could not be completed\n");
+  }
+  else if (pid == 0) { // child
+    if (fin != 0) { // adjusts input
+      dup2(fin, 0); // replaces stdin with fin
+      close(fin);
+    }
+    if (fout != 1) { // adjusts output
+      dup2(fout, 1); // replaces stdout with fin
+      close(fout);
+    }
+
+    int exec = execvp(argv[0], argv);
+    if (exec < 0) {
+      if (print)
+        printf("ERROR: Could not execute command\n");
+    }
+    exit(0);
+  }
+  else { // parent process
+    wait(NULL); // so child process finishes first
+  } // checking pid for parent or child
+}
+
+int parser(char* input, char* delim) {
   int commands = 0;
   // tells if next command is an input/output file instead of an argument
   bool next_out = false;
@@ -42,9 +76,14 @@ void parser(char* input, char* delim) {
   }
   *iter = NULL; // need a null at the end to work properly with execvp
 
+  // for (int i = 0; i < commands; i++) {
+  //   printf("%s ", args[commands]);
+  // }
+  // printf("\n");
+
   // args now holds all strings from command line
   // ie, args = {"cat", "hello.txt", "|", "sort", "numbers.txt"};
-  return;
+  return commands;
 }
 
 bool valid_input(char* input) {
@@ -84,7 +123,7 @@ int main(int argc, char* argv[], char** envp) {
   char input[MAX_CONSOLE_INPUT]; // command line input from user
 
   // checks for supressing output
-  bool print = true;
+  print = true;
   if (argc > 1) {
     print = (strcmp(argv[1],"-n") != 0);
   }
@@ -106,7 +145,13 @@ int main(int argc, char* argv[], char** envp) {
           continue;
         }
 
-        parser(input, " \n"); // parses input into args
+        int cmds = parser(input, " \n"); // parses input into args
+
+        //
+        // for (int i = 0; i < cmds; i++) {
+        //   printf("%s ", args[cmds]);
+        // }
+        // printf("\n");
 
           // int pipefd[2];
           // char input_str[100];
@@ -123,29 +168,29 @@ int main(int argc, char* argv[], char** envp) {
         // fork needed to not overrun the current program
         // ie, parent program is processing input and running the shell
         // the parent process creates child processes to actually execute the commands
-        pid_t pid = fork();
 
-        if (pid < 0) {
-          // error with forking
-          fprintf(stderr, "Fork could not be completed" );
-          return 1;
-        }
-        else if (pid == 0) { // child
-          if (file_out) { // can only occur for last argument
-            close(1);
-            open(out_file, O_WRONLY | O_CREAT | O_APPEND); // automatically goes to file id 1
-          }
+        char* argv[MAX_CONSOLE_TOKENS];
+        int index = 0; // index for each individual word
 
-          if (execvp(args[0], args) < 0) {
-                if (print) {printf("ERROR: Command could not be executed \n");}
+        bool has_pipe = false;
+
+        for (int i = 0; i < cmds; i++) {
+          if (args[i][0] != '|') {
+            argv[index] = args[i];
+            index++;
           } else {
-            if (print) {printf("Executed command successfully\n");}
+            has_pipe = true;
+            execute(argv, 0, 1);
+            index = 0;
           }
-          exit(0);
         }
-        else { // parent process
-          wait(NULL); // so child process finishes first
-        } // checking pid for parent or child
+
+        int fout = 1;
+        if (file_out) {
+          fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
+        }
+        execute(argv, 0, fout);
+
       } else {
         // if fgets returns null (from ctrl + d)
         run = false;

@@ -1,6 +1,9 @@
-1
-1
-3
-4
-5
-9
+README.md
+hello.txt
+makefile
+myshell
+myshell.dSYM
+nums.txt
+output.txt
+shell.c
+strings.c
