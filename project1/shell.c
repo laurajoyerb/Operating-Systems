@@ -20,9 +20,6 @@ bool print;
 bool file_out;
 
 void execute(char* fargv[], int fin, int fout) {
-  int pipefd[2];
-  pipe(pipefd);
-
   pid_t pid = fork();
 
   if (pid < 0) {
@@ -31,15 +28,23 @@ void execute(char* fargv[], int fin, int fout) {
       printf("Fork could not be completed\n");
   }
   else if (pid == 0) { // child
+    printf("1\n");
     if (fin != 0) { // adjusts input
       dup2(fin, 0); // replaces stdin with fin
+      printf("2\n");
       close(fin);
+      printf("3\n");
     }
     if (fout != 1) { // adjusts output
+      // close(1);
+      printf("4\n");
       dup2(fout, 1); // replaces stdout with fin
+      printf("5\n");
       close(fout);
     }
 
+    printf("fin: %d\n", fin);
+    printf("fout: %d\n", fout);
     int exec = execvp(fargv[0], fargv);
     if (exec < 0) {
       if (print)
@@ -151,24 +156,63 @@ int main(int argc, char* argv[], char** envp) {
         int index = 0; // index for each individual word
 
         bool has_pipe = false;
-
         for (int i = 0; i < cmds; i++) {
-          if (args[i][0] != '|') {
-            fargv[index] = args[i];
-            index++;
-          } else {
+          if (args[i][0] == '|') {
             has_pipe = true;
-            execute(fargv, 0, 1);
-            index = 0;
           }
         }
 
-        int fout = 1;
-        if (file_out) {
-          fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
-        }
-        execute(fargv, 0, fout);
+        if (!has_pipe) {
+          for (int i = 0; i < cmds; i++) {
+            fargv[index] = args[i];
+            index++;
+          }
 
+          int fout = 1;
+          if (file_out) {
+            fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
+          }
+          execute(fargv, 0, fout);
+        } else {
+          // has pipe
+
+          int fd[2];
+          char* pipeargs1[32];
+          char* pipeargs2[32];
+
+          if(pipe(fd)){
+            perror("pipe");
+            return -1;
+          }
+          switch(fork()){
+              case -1:
+                  perror("fork");
+                  break;
+              case 0:
+                  // child second arg
+                  pipeargs1[0] = "sort";
+                  pipeargs1[2] = NULL;
+                  close(fd[1]);
+                  dup2(fd[0], STDIN_FILENO);
+                  close(fd[0]);
+                  execvp(pipeargs1[0], pipeargs1);
+                  exit(0);
+                  // execl("./log", NULL);
+              default:
+                  // parent first arg
+                  pipeargs2[0] = "cat";
+                  pipeargs2[1] = "nums.txt";
+                  pipeargs2[2] = NULL;
+                  close(fd[0]);
+                  dup2(fd[1], 1);
+                  // write(fd[1], buf, sizeof(buf));
+                  close(fd[1]);
+                  execvp(pipeargs2[0], pipeargs2);
+                  wait(NULL);
+          }
+          printf("END~\n");
+
+        }
       } else {
         // if fgets returns null (from ctrl + d)
         run = false;

@@ -4,9 +4,8 @@
 #include <unistd.h>
 #include <errno.h>
 
-int main(int argc, char *argv[]) {
+int main() {
     int fd[2];
-    char buf[] = "ls";
     char* fargv[32];
     char* fargv1[32];
 
