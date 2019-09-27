@@ -33,22 +33,23 @@ void executePipes() {
           perror("fork");
           break;
       case 0:
-          // child second arg
-          pipeargs1[0] = "sort";
+          // child first arg
+          pipeargs1[0] = "cat";
+          pipeargs1[1] = "nums.txt";
           pipeargs1[2] = NULL;
-          close(fd[1]);
-          dup2(fd[0], STDIN_FILENO);
+
           close(fd[0]);
+          dup2(fd[1], 1);
+          close(fd[1]);
           execvp(pipeargs1[0], pipeargs1);
           exit(0);
       default:
           // parent first arg
-          pipeargs2[0] = "cat";
-          pipeargs2[1] = "nums.txt";
+          pipeargs2[0] = "sort";
           pipeargs2[2] = NULL;
-          close(fd[0]);
-          dup2(fd[1], 1);
           close(fd[1]);
+          dup2(fd[0], STDIN_FILENO);
+          close(fd[0]);
           execvp(pipeargs2[0], pipeargs2);
           wait(NULL);
   }
