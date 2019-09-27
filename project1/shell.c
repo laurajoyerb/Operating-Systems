@@ -19,6 +19,42 @@ char* out_file;
 bool print;
 bool file_out;
 
+void executePipes() {
+  int fd[2];
+  char* pipeargs1[32];
+  char* pipeargs2[32];
+
+  if(pipe(fd)){
+    perror("pipe");
+    return;
+  }
+  switch(fork()){
+      case -1:
+          perror("fork");
+          break;
+      case 0:
+          // child second arg
+          pipeargs1[0] = "sort";
+          pipeargs1[2] = NULL;
+          close(fd[1]);
+          dup2(fd[0], STDIN_FILENO);
+          close(fd[0]);
+          execvp(pipeargs1[0], pipeargs1);
+          exit(0);
+      default:
+          // parent first arg
+          pipeargs2[0] = "cat";
+          pipeargs2[1] = "nums.txt";
+          pipeargs2[2] = NULL;
+          close(fd[0]);
+          dup2(fd[1], 1);
+          close(fd[1]);
+          execvp(pipeargs2[0], pipeargs2);
+          wait(NULL);
+  }
+  printf("END~\n");
+}
+
 void execute(char* fargv[], int fin, int fout) {
   pid_t pid = fork();
 
@@ -28,18 +64,13 @@ void execute(char* fargv[], int fin, int fout) {
       printf("Fork could not be completed\n");
   }
   else if (pid == 0) { // child
-    printf("1\n");
     if (fin != 0) { // adjusts input
       dup2(fin, 0); // replaces stdin with fin
-      printf("2\n");
       close(fin);
-      printf("3\n");
     }
     if (fout != 1) { // adjusts output
       // close(1);
-      printf("4\n");
       dup2(fout, 1); // replaces stdout with fin
-      printf("5\n");
       close(fout);
     }
 
@@ -197,7 +228,6 @@ int main(int argc, char* argv[], char** envp) {
                   close(fd[0]);
                   execvp(pipeargs1[0], pipeargs1);
                   exit(0);
-                  // execl("./log", NULL);
               default:
                   // parent first arg
                   pipeargs2[0] = "cat";
@@ -205,7 +235,6 @@ int main(int argc, char* argv[], char** envp) {
                   pipeargs2[2] = NULL;
                   close(fd[0]);
                   dup2(fd[1], 1);
-                  // write(fd[1], buf, sizeof(buf));
                   close(fd[1]);
                   execvp(pipeargs2[0], pipeargs2);
                   wait(NULL);
