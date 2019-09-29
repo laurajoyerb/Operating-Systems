@@ -19,10 +19,8 @@ char* out_file;
 bool print;
 bool file_out;
 
-void executePipes() {
+void executePipes(char* pipeargs1[32], char* pipeargs2[32]) {
   int fd[2];
-  char* pipeargs1[32];
-  char* pipeargs2[32];
 
   if(pipe(fd)){
     perror("pipe");
@@ -34,10 +32,6 @@ void executePipes() {
           break;
       case 0:
           // child first arg
-          pipeargs1[0] = "cat";
-          pipeargs1[1] = "nums.txt";
-          pipeargs1[2] = NULL;
-
           close(fd[0]);
           dup2(fd[1], 1);
           close(fd[1]);
@@ -45,15 +39,12 @@ void executePipes() {
           exit(0);
       default:
           // parent first arg
-          pipeargs2[0] = "sort";
-          pipeargs2[2] = NULL;
           close(fd[1]);
           dup2(fd[0], STDIN_FILENO);
           close(fd[0]);
           execvp(pipeargs2[0], pipeargs2);
           wait(NULL);
   }
-  printf("END~\n");
 }
 
 void execute(char* fargv[], int fin, int fout) {
@@ -172,8 +163,10 @@ int main(int argc, char* argv[], char** envp) {
 
       if (print) { printf("my_shell$ "); }
 
+
       // grabs input from user
       if (fgets(input, sizeof(input), stdin) != NULL) {
+
         if (!valid_input(input)) {
           if (print) {printf("ERROR: Invalid input\n");}
           continue;
@@ -207,40 +200,80 @@ int main(int argc, char* argv[], char** envp) {
           execute(fargv, 0, fout);
         } else {
           // has pipe
-
-          int fd[2];
+          index = 0;
           char* pipeargs1[32];
           char* pipeargs2[32];
 
-          if(pipe(fd)){
-            perror("pipe");
-            return -1;
+          bool first = true;
+
+          for (int i = 0; i < cmds; i++) {
+            if (args[i][0] != '|') {
+              if (first) {
+                pipeargs1[index] = args[i];
+              } else {
+                pipeargs2[index] = args[i];
+              }
+              index++;
+            } else {
+              pipeargs1[index] = NULL;
+              first = false;
+              index = 0;
+              // char* foo = NULL;
+              // strcpy(foo, (const char*) fargv);
+              // memset(fargv, '\0', index);
+            }
           }
-          switch(fork()){
-              case -1:
-                  perror("fork");
-                  break;
-              case 0:
-                  // child second arg
-                  pipeargs1[0] = "sort";
-                  pipeargs1[2] = NULL;
-                  close(fd[1]);
-                  dup2(fd[0], STDIN_FILENO);
-                  close(fd[0]);
-                  execvp(pipeargs1[0], pipeargs1);
-                  exit(0);
-              default:
-                  // parent first arg
-                  pipeargs2[0] = "cat";
-                  pipeargs2[1] = "nums.txt";
-                  pipeargs2[2] = NULL;
-                  close(fd[0]);
-                  dup2(fd[1], 1);
-                  close(fd[1]);
-                  execvp(pipeargs2[0], pipeargs2);
-                  wait(NULL);
-          }
-          printf("END~\n");
+
+          pipeargs2[index] = NULL;
+
+          // for (int i = 0; i < 2; i++) {
+          //   printf("pipeargs1: %s ", pipeargs1[i]);
+          // }
+          // printf("\n");
+
+          // pipeargs1[0] = "cat";
+          // pipeargs1[1] = "nums.txt";
+          // pipeargs1[2] = NULL;
+          //
+          // pipeargs2[0] = "sort";
+          // pipeargs2[2] = NULL;
+
+
+          executePipes(pipeargs1, pipeargs2);
+
+          // int fd[2];
+          // char* pipeargs1[32];
+          // char* pipeargs2[32];
+          //
+          // if(pipe(fd)){
+          //   perror("pipe");
+          //   return -1;
+          // }
+          // switch(fork()){
+          //     case -1:
+          //         perror("fork");
+          //         break;
+          //     case 0:
+          //         // child second arg
+          //         pipeargs1[0] = "sort";
+          //         pipeargs1[2] = NULL;
+          //         close(fd[1]);
+          //         dup2(fd[0], STDIN_FILENO);
+          //         close(fd[0]);
+          //         execvp(pipeargs1[0], pipeargs1);
+          //         exit(0);
+          //     default:
+          //         // parent first arg
+          //         pipeargs2[0] = "cat";
+          //         pipeargs2[1] = "nums.txt";
+          //         pipeargs2[2] = NULL;
+          //         close(fd[0]);
+          //         dup2(fd[1], 1);
+          //         close(fd[1]);
+          //         execvp(pipeargs2[0], pipeargs2);
+          //         wait(NULL);
+          // }
+          // printf("END~\n");
 
         }
       } else {
