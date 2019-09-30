@@ -19,6 +19,8 @@ char* out_file;
 bool print;
 bool file_out;
 
+bool background;
+
 struct pipeCommand // makes storing arguments easier (UGH SEG FAULTS)
 {
   const char **arg;
@@ -27,6 +29,7 @@ struct pipeCommand // makes storing arguments easier (UGH SEG FAULTS)
 void execute(char* fargv[], int fin, int fout) {
   // fargv contains all args for a single, non piped command
   // fin and fout hold the file descriptors for where execvp should input and output
+  signal(SIGCHLD, SIG_IGN); /* Silently (and portably) reap children. */
   pid_t pid = fork();
 
   if (pid < 0) {
@@ -52,11 +55,13 @@ void execute(char* fargv[], int fin, int fout) {
     exit(0);
   }
   else { // parent process
-    wait(NULL);
+    if (!background)
+      wait(NULL);
   }
 }
 
 int forkProcess (int in, int out, struct pipeCommand *cmd) {
+  signal(SIGCHLD, SIG_IGN); /* Silently (and portably) reap children. */
   pid_t pid = fork();
 
   if (pid == 0) {
@@ -71,7 +76,8 @@ int forkProcess (int in, int out, struct pipeCommand *cmd) {
     }
     return execvp (cmd->arg [0], (char* const*)cmd->arg);
   } else if (pid > 0) {
-    wait(NULL);
+    if (!background)
+      wait(NULL);
   }
   return pid;
 }
@@ -183,8 +189,10 @@ bool valid_input(char* input) {
         return false;
       }
     }
-    if (input[i] == '&' && input[i+1] != '\n') { // has to be at end of line
-      return false;
+    if (input[i] == '&') { // has to be at end of line
+      background = true;
+      if (input[i + 1] != '\n')
+        return false;
     }
   }
   if (ins > 1 || outs > 1) {
@@ -215,6 +223,7 @@ int main(int argc, char* argv[], char** envp) {
       memset(args, '\0', MAX_CONSOLE_TOKENS);
       memset(fargv, '\0', MAX_CONSOLE_TOKENS);
       file_out = false;
+      background = false;
 
       // ensures that stdin and stdout are reopened before accepting new commands
       dup2(stdin_copy, 0);
