@@ -9,7 +9,7 @@ The input can be redirected using the meta character <. For example, both "cat< 
 
 The ampersand allows the shell to run processes in the background and immediately re-prompts the user without waiting for the process to finish.
 
-Piping can be executed for up to four separate arguments. If the shell reads more than 3 pipe characters, it will return that is unable to execute the command.
+Piping can be executed for up to seven separate arguments. If the shell reads more than 6 pipe characters, it will return that is unable to execute the command.
 
 ### Challenges
 Piping was a big challenge for this assignment. Trying to execute an "infinite" number of pipes was very difficult to do because of the structure of the arrays or arrays of arrays. I had a very hard time trying to parse and organize the arguments properly to be fed into a looping structure to handle the pipes. Indexing of the arguments often caused seg faults, and the complexity of the array structures made handling them very difficult.
