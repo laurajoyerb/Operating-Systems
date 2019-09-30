@@ -320,6 +320,9 @@ int main(int argc, char* argv[], char** envp) {
           const char* pipeargs2[32];
           const char* pipeargs3[32];
           const char* pipeargs4[32];
+          const char* pipeargs5[32];
+          const char* pipeargs6[32];
+          const char* pipeargs7[32];
 
           int pipeNum = 1;
           bool tooManyPipes = false;
@@ -339,6 +342,15 @@ int main(int argc, char* argv[], char** envp) {
                 case 4:
                   pipeargs4[index] = args[i];
                   break;
+                case 5:
+                  pipeargs5[index] = args[i];
+                  break;
+                case 6:
+                  pipeargs6[index] = args[i];
+                  break;
+                case 7:
+                  pipeargs7[index] = args[i];
+                  break;
               }
               index++;
             } else { // triggered by pipe character
@@ -352,7 +364,16 @@ int main(int argc, char* argv[], char** envp) {
                 case 3:
                   pipeargs3[index] = NULL;
                   break;
-                default: // more than 3 pipes or 4 connected arguments (not supported)
+                case 4:
+                  pipeargs4[index] = NULL;
+                  break;
+                case 5:
+                  pipeargs5[index] = NULL;
+                  break;
+                case 6:
+                  pipeargs6[index] = NULL;
+                  break;
+                default: // more than 6 pipes or 7 connected arguments (not supported)
                   tooManyPipes = true;
               }
               pipeNum++;
@@ -387,6 +408,36 @@ int main(int argc, char* argv[], char** envp) {
               line[2].arg = pipeargs3;
               line[3].arg = pipeargs4;
               executePipes(4, line);
+              break;
+            case 5:
+              pipeargs5[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              line[2].arg = pipeargs3;
+              line[3].arg = pipeargs4;
+              line[4].arg = pipeargs5;
+              executePipes(5, line);
+              break;
+            case 6:
+              pipeargs6[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              line[2].arg = pipeargs3;
+              line[3].arg = pipeargs4;
+              line[4].arg = pipeargs5;
+              line[5].arg = pipeargs6;
+              executePipes(6, line);
+              break;
+            case 7:
+              pipeargs7[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              line[2].arg = pipeargs3;
+              line[3].arg = pipeargs4;
+              line[4].arg = pipeargs5;
+              line[5].arg = pipeargs6;
+              line[6].arg = pipeargs7;
+              executePipes(7, line);
               break;
           }
         }
