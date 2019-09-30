@@ -66,8 +66,6 @@ void execute(char* fargv[], int fin, int fout) {
       close(fout);
     }
 
-    printf("fin: %d\n", fin);
-    printf("fout: %d\n", fout);
     int exec = execvp(fargv[0], fargv);
     if (exec < 0) {
       if (print)
@@ -223,57 +221,9 @@ int main(int argc, char* argv[], char** envp) {
               // memset(fargv, '\0', index);
             }
           }
-
           pipeargs2[index] = NULL;
 
-          // for (int i = 0; i < 2; i++) {
-          //   printf("pipeargs1: %s ", pipeargs1[i]);
-          // }
-          // printf("\n");
-
-          // pipeargs1[0] = "cat";
-          // pipeargs1[1] = "nums.txt";
-          // pipeargs1[2] = NULL;
-          //
-          // pipeargs2[0] = "sort";
-          // pipeargs2[2] = NULL;
-
-
           executePipes(pipeargs1, pipeargs2);
-
-          // int fd[2];
-          // char* pipeargs1[32];
-          // char* pipeargs2[32];
-          //
-          // if(pipe(fd)){
-          //   perror("pipe");
-          //   return -1;
-          // }
-          // switch(fork()){
-          //     case -1:
-          //         perror("fork");
-          //         break;
-          //     case 0:
-          //         // child second arg
-          //         pipeargs1[0] = "sort";
-          //         pipeargs1[2] = NULL;
-          //         close(fd[1]);
-          //         dup2(fd[0], STDIN_FILENO);
-          //         close(fd[0]);
-          //         execvp(pipeargs1[0], pipeargs1);
-          //         exit(0);
-          //     default:
-          //         // parent first arg
-          //         pipeargs2[0] = "cat";
-          //         pipeargs2[1] = "nums.txt";
-          //         pipeargs2[2] = NULL;
-          //         close(fd[0]);
-          //         dup2(fd[1], 1);
-          //         close(fd[1]);
-          //         execvp(pipeargs2[0], pipeargs2);
-          //         wait(NULL);
-          // }
-          // printf("END~\n");
 
         }
       } else {
