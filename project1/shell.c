@@ -236,8 +236,9 @@ int main(int argc, char* argv[], char** envp) {
           const char* pipeargs4[32];
 
           int pipeNum = 1;
+          bool tooManyPipes = false;
 
-          for (int i = 0; i < cmds; i++) {
+          for (int i = 0; i < cmds; i++ && !tooManyPipes) {
             if (args[i][0] != '|') {
               switch(pipeNum) {
                 case 1:
@@ -265,12 +266,18 @@ int main(int argc, char* argv[], char** envp) {
                 case 3:
                   pipeargs3[index] = NULL;
                   break;
+                default: // more than 3 pipes or 4 connected arguments (not supported)
+                  tooManyPipes = true;
               }
               pipeNum++;
               index = 0;
             }
           }
 
+          if (tooManyPipes) {
+            printf("ERROR: Could not execute command\n");
+            continue;
+          }
           // sets last pipeargs last element to NULL and execute args
           struct pipeCommand line[pipeNum];
           switch (pipeNum) {
