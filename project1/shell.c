@@ -24,6 +24,37 @@ struct pipeCommand // makes storing arguments easier (UGH SEG FAULTS)
   const char **arg;
 };
 
+void execute(char* fargv[], int fin, int fout) {
+  pid_t pid = fork();
+
+  if (pid < 0) {
+    // error with forking
+    if (print)
+      printf("Fork could not be completed\n");
+  }
+  else if (pid == 0) { // child
+    if (fin != 0) { // adjusts input
+      dup2(fin, 0); // replaces stdin with fin
+      close(fin);
+    }
+    if (fout != 1) { // adjusts output
+      // close(1);
+      dup2(fout, 1); // replaces stdout with fin
+      close(fout);
+    }
+
+    int exec = execvp(fargv[0], fargv);
+    if (exec < 0) {
+      if (print)
+        printf("ERROR: Could not execute command\n");
+    }
+    exit(0);
+  }
+  else { // parent process
+    wait(NULL); // so child process finishes first
+  } // checking pid for parent or child
+}
+
 int forkProcess (int in, int out, struct pipeCommand *cmd) {
   pid_t pid = fork();
 
@@ -65,43 +96,19 @@ void executePipes(int n, struct pipeCommand *cmd) {
     dup2 (in, 0);
 
   // last pipe command has to be executed separately, so this final process forks and completes it
-  pid_t pid = fork();
-  if (pid == 0) {
-    execvp (cmd[i].arg [0], (char* const*)cmd[i].arg);
-  } else {
-    wait(NULL);
-  }
-}
 
-void execute(char* fargv[], int fin, int fout) {
-  pid_t pid = fork();
-
-  if (pid < 0) {
-    // error with forking
-    if (print)
-      printf("Fork could not be completed\n");
+  int fout = 1;
+  if (file_out) {
+    fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
   }
-  else if (pid == 0) { // child
-    if (fin != 0) { // adjusts input
-      dup2(fin, 0); // replaces stdin with fin
-      close(fin);
-    }
-    if (fout != 1) { // adjusts output
-      // close(1);
-      dup2(fout, 1); // replaces stdout with fin
-      close(fout);
-    }
+  execute((char**) cmd[i].arg, 0, fout);
 
-    int exec = execvp(fargv[0], fargv);
-    if (exec < 0) {
-      if (print)
-        printf("ERROR: Could not execute command\n");
-    }
-    exit(0);
-  }
-  else { // parent process
-    wait(NULL); // so child process finishes first
-  } // checking pid for parent or child
+  // pid_t pid = fork();
+  // if (pid == 0) {
+  //   execvp (cmd[i].arg [0], (char* const*)cmd[i].arg);
+  // } else {
+  //   wait(NULL);
+  // }
 }
 
 int parser(char* input, char* delim) {
