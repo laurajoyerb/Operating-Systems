@@ -4,3 +4,14 @@
 1
 5
 9
+README.md
+a.out
+hello.txt
+makefile
+myshell
+myshell.dSYM
+nums.txt
+output.txt
+pipes.c
+shell.c
+strings.c

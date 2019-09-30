@@ -19,31 +19,57 @@ char* out_file;
 bool print;
 bool file_out;
 
-void executePipes(char* pipeargs1[32], char* pipeargs2[32]) {
-  int fd[2];
+struct pipeCommand // makes storing arguments easier (UGH SEG FAULTS)
+{
+  const char **arg;
+};
 
-  if(pipe(fd)){
-    perror("pipe");
-    return;
+int forkProcess (int in, int out, struct pipeCommand *cmd) {
+  pid_t pid = fork();
+
+  if (pid == 0) {
+    if (in != 0) {
+      dup2 (in, 0);
+      close (in);
+    }
+
+    if (out != 1) {
+      dup2 (out, 1);
+      close (out);
+    }
+    return execvp (cmd->arg [0], (char* const*)cmd->arg);
+  } else if (pid > 0) {
+    wait(NULL);
   }
-  switch(fork()){
-      case -1:
-          perror("fork");
-          break;
-      case 0:
-          // child first arg
-          close(fd[0]);
-          dup2(fd[1], 1);
-          close(fd[1]);
-          execvp(pipeargs1[0], pipeargs1);
-          exit(0);
-      default:
-          // parent first arg
-          close(fd[1]);
-          dup2(fd[0], STDIN_FILENO);
-          close(fd[0]);
-          execvp(pipeargs2[0], pipeargs2);
-          wait(NULL);
+  return pid;
+}
+
+void executePipes(int n, struct pipeCommand *cmd) {
+  int i;
+  int in, fd [2];
+  in = 0;
+
+  for (i = 0; i < n - 1; ++i) {
+    pipe (fd);
+
+    // pass in input from previous pipe (or std in if first iteration), output is write end of pipe
+    forkProcess (in, fd[1], cmd + i);
+    close (fd[1]);
+
+    // redirects the next input to be the read end of the current pipe
+    in = fd 0];
+  }
+
+  // redirects stdin to read end of pipe to grab the last write
+  if (in != 0)
+    dup2 (in, 0);
+
+  // last pipe command has to be executed separately, so this final process forks and completes it
+  pid_t pid = fork();
+  if (pid == 0) {
+    execvp (cmd[i].arg [0], (char* const*)cmd[i].arg);
+  } else {
+    wait(NULL);
   }
 }
 
@@ -144,6 +170,9 @@ int main(int argc, char* argv[], char** envp) {
   char input[MAX_CONSOLE_INPUT]; // command line input from user
   char* fargv[MAX_CONSOLE_TOKENS];
 
+  int stdin_copy = dup(0);
+  int stdout_copy = dup(1);
+
   // checks for supressing output
   print = true;
   if (argc > 1) {
@@ -159,12 +188,14 @@ int main(int argc, char* argv[], char** envp) {
       memset(fargv, '\0', MAX_CONSOLE_TOKENS);
       file_out = false;
 
-      if (print) { printf("my_shell$ "); }
+      // ensures that stdin and stdout are reopened before accepting new commands
+      dup2(stdin_copy, 0);
+      dup2(stdout_copy, 1);
 
+      if (print) { printf("my_shell$ "); }
 
       // grabs input from user
       if (fgets(input, sizeof(input), stdin) != NULL) {
-
         if (!valid_input(input)) {
           if (print) {printf("ERROR: Invalid input\n");}
           continue;
@@ -199,32 +230,63 @@ int main(int argc, char* argv[], char** envp) {
         } else {
           // has pipe
           index = 0;
-          char* pipeargs1[32];
-          char* pipeargs2[32];
+          const char* pipeargs1[32];
+          const char* pipeargs2[32];
+          const char* pipeargs3[32];
+          const char* pipeargs4[32];
 
-          bool first = true;
+          int pipeNum = 1;
 
           for (int i = 0; i < cmds; i++) {
             if (args[i][0] != '|') {
-              if (first) {
-                pipeargs1[index] = args[i];
-              } else {
-                pipeargs2[index] = args[i];
+              switch(pipeNum) {
+                case 1:
+                  pipeargs1[index] = args[i];
+                  break;
+                case 2:
+                  pipeargs2[index] = args[i];
+                  break;
+                case 3:
+                  pipeargs3[index] = args[i];
+                  break;
+                case 4:
+                  pipeargs4[index] = args[i];
+                  break;
               }
               index++;
-            } else {
-              pipeargs1[index] = NULL;
-              first = false;
+            } else { // triggered by pipe character
+              switch(pipeNum) {
+                case 1:
+                  pipeargs1[index] = NULL;
+                  break;
+                case 2:
+                  pipeargs2[index] = NULL;
+                  break;
+                case 3:
+                  pipeargs3[index] = NULL;
+                  break;
+              }
+              pipeNum++;
               index = 0;
-              // char* foo = NULL;
-              // strcpy(foo, (const char*) fargv);
-              // memset(fargv, '\0', index);
             }
           }
-          pipeargs2[index] = NULL;
 
-          executePipes(pipeargs1, pipeargs2);
+          // sets last pipeargs last element to NULL
+          switch (pipeNum) {
+            case 2:
+              pipeargs2[index] = NULL;
+              break;
+            case 3:
+              pipeargs3[index] = NULL;
+              break;
+            case 4:
+              pipeargs4[index] = NULL;
+              break;
+          }
 
+          struct pipeCommand line [] = { {pipeargs1}, {pipeargs2}};
+
+          executePipes(2, line);
         }
       } else {
         // if fgets returns null (from ctrl + d)
