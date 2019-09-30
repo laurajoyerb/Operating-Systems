@@ -124,7 +124,15 @@ int parser(char* input, char* delim) {
         ptr[strlen(ptr) - 1] = '\0';
       }
 
+      if(ptr[0] == '|' && strlen(ptr) > 1) { // catches pipes on second command ie ls |sort
+        *iter++ = "|";
+        commands++;
+        ptr[0] = '\0';
+        ptr++;
+      }
+
       char* badspaces = NULL;
+      char* badpipespace = NULL;
 
       for (int i = 1; i < strlen(ptr) - 1; i++) {
         if(ptr[i] == '<') {
@@ -139,11 +147,23 @@ int parser(char* input, char* delim) {
           file_out = true;
           next_out = false;
         }
+        if (ptr[i] == '|') {
+          badpipespace = ptr;
+          badpipespace += i + 1;
+          ptr[i] = '\0';
+        }
       }
 
       if (ptr[strlen(ptr) - 1] == '>' && strlen(ptr) > 1) { // catches output redirects attached to first command
         next_out = true;
         ptr[strlen(ptr) - 1] = '\0';
+        *iter++ = ptr;
+        commands++;
+      } else if (ptr[strlen(ptr) - 1] == '|' && strlen(ptr) > 1) { // catches pipes attached to first command ie ls| sort
+        ptr[strlen(ptr) - 1] = '\0';
+        *iter++ = ptr;
+        commands++;
+        ptr = "|";
         *iter++ = ptr;
         commands++;
       } else if (next_out) { // grabs output file redirect name
@@ -171,6 +191,12 @@ int parser(char* input, char* delim) {
         *iter++ = badspaces;
         commands++;
         badspaces = NULL;
+      } else if (badpipespace != NULL) {
+        *iter++ = "|";
+        commands++;
+        *iter++ = badpipespace;
+        commands++;
+        badpipespace = NULL;
       }
       ptr = strtok(NULL, delim);
   }
