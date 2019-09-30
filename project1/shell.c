@@ -57,7 +57,7 @@ void executePipes(int n, struct pipeCommand *cmd) {
     close (fd[1]);
 
     // redirects the next input to be the read end of the current pipe
-    in = fd 0];
+    in = fd [0];
   }
 
   // redirects stdin to read end of pipe to grab the last write
@@ -271,22 +271,31 @@ int main(int argc, char* argv[], char** envp) {
             }
           }
 
-          // sets last pipeargs last element to NULL
+          // sets last pipeargs last element to NULL and execute args
+          struct pipeCommand line[pipeNum];
           switch (pipeNum) {
             case 2:
               pipeargs2[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              executePipes(2, line);
               break;
             case 3:
               pipeargs3[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              line[2].arg = pipeargs3;
+              executePipes(3, line);
               break;
             case 4:
               pipeargs4[index] = NULL;
+              line[0].arg = pipeargs1;
+              line[1].arg = pipeargs2;
+              line[2].arg = pipeargs3;
+              line[3].arg = pipeargs4;
+              executePipes(4, line);
               break;
           }
-
-          struct pipeCommand line [] = { {pipeargs1}, {pipeargs2}};
-
-          executePipes(2, line);
         }
       } else {
         // if fgets returns null (from ctrl + d)
