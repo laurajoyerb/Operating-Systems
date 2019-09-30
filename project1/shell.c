@@ -25,6 +25,8 @@ struct pipeCommand // makes storing arguments easier (UGH SEG FAULTS)
 };
 
 void execute(char* fargv[], int fin, int fout) {
+  // fargv contains all args for a single, non piped command
+  // fin and fout hold the file descriptors for where execvp should input and output
   pid_t pid = fork();
 
   if (pid < 0) {
@@ -45,14 +47,13 @@ void execute(char* fargv[], int fin, int fout) {
 
     int exec = execvp(fargv[0], fargv);
     if (exec < 0) {
-      if (print)
-        printf("ERROR: Could not execute command\n");
+      printf("ERROR: Could not execute command\n");
     }
     exit(0);
   }
   else { // parent process
-    wait(NULL); // so child process finishes first
-  } // checking pid for parent or child
+    wait(NULL);
+  }
 }
 
 int forkProcess (int in, int out, struct pipeCommand *cmd) {
@@ -96,19 +97,11 @@ void executePipes(int n, struct pipeCommand *cmd) {
     dup2 (in, 0);
 
   // last pipe command has to be executed separately, so this final process forks and completes it
-
   int fout = 1;
   if (file_out) {
     fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
   }
   execute((char**) cmd[i].arg, 0, fout);
-
-  // pid_t pid = fork();
-  // if (pid == 0) {
-  //   execvp (cmd[i].arg [0], (char* const*)cmd[i].arg);
-  // } else {
-  //   wait(NULL);
-  // }
 }
 
 int parser(char* input, char* delim) {
@@ -144,12 +137,21 @@ bool valid_input(char* input) {
   int ins = 0;
   int outs = 0;
   int i;
+  bool has_pipe = false;
   for (i = 0; i < MAX_CONSOLE_INPUT - 1; i++) { // to max minus 1 to avoid seg faulting on and check
+    if (input[i] == '|') {
+      has_pipe = true;
+      if (outs > 0) {
+        return false;
+      }
+    }
     if (input[i] == '<') {
       ins++;
       if (i == 0) { // shouldn't be at beginning of line
         return false;
       } else if (input[i+1] == '\n') { // also shouldn't be at end
+        return false;
+      } else if (has_pipe) {
         return false;
       }
     }
