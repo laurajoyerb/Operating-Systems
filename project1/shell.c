@@ -99,7 +99,7 @@ void executePipes(int n, struct pipeCommand *cmd) {
   // last pipe command has to be executed separately, so this final process forks and completes it
   int fout = 1;
   if (file_out) {
-    fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
+    fout = open(out_file, O_RDWR | O_CREAT | O_APPEND);
   }
   execute((char**) cmd[i].arg, 0, fout);
 }
@@ -114,13 +114,32 @@ int parser(char* input, char* delim) {
   char *ptr = strtok(input, delim); // returns pointer to the next token
   while (ptr != NULL) // as soon as ptr is null, we have reached the end of the line
   {
-      if (next_out) { // grabs output file redirect name
+      if (ptr[strlen(ptr) - 1] == '<' && strlen(ptr) > 1) { // catches inputs attached to first command
+        ptr[strlen(ptr) - 1] = '\0';
+      }
+
+      if (ptr[strlen(ptr) - 1] == '>' && strlen(ptr) > 1) { // catches output redirects attached to first command
+        next_out = true;
+        ptr[strlen(ptr) - 1] = '\0';
+        *iter++ = ptr;
+        commands++;
+      } else if (next_out) { // grabs output file redirect name
         out_file = ptr;
         file_out = true;
         next_out = false;
       } else if (ptr[0] == '>') { // flags next string as output file name and skips adding char to args
-        next_out = true;
-      } else if (ptr[0] != '&' && ptr[0] != '<') { // if normal command, save to args and increment
+        if (ptr[1] != '\0') { // catches outputs attached to second command (output file name)
+          out_file = ++ptr;
+          file_out = true;
+        } else {
+          next_out = true;
+        }
+      } else if (ptr[0] == '<') { // flags next string as output file name and skips adding char to args
+        if (ptr[1] != '\0') { // if no space between input and next character, save attached word as arg
+          *iter++ = ++ptr;
+          commands++;
+        }
+      } else if (ptr[0] != '&') { // if normal command, save to args and increment
         *iter++ = ptr;
         commands++;
       }
@@ -233,7 +252,7 @@ int main(int argc, char* argv[], char** envp) {
 
           int fout = 1;
           if (file_out) {
-            fout = open(out_file, O_WRONLY | O_CREAT | O_APPEND);
+            fout = open(out_file, O_RDWR | O_CREAT | O_APPEND);
           }
           execute(fargv, 0, fout);
         } else {
@@ -247,7 +266,7 @@ int main(int argc, char* argv[], char** envp) {
           int pipeNum = 1;
           bool tooManyPipes = false;
 
-          for (int i = 0; i < cmds; i++ && !tooManyPipes) {
+          for (int i = 0; i < cmds && !tooManyPipes; i++) {
             if (args[i][0] != '|') {
               switch(pipeNum) {
                 case 1:
