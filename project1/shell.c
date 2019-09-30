@@ -124,6 +124,23 @@ int parser(char* input, char* delim) {
         ptr[strlen(ptr) - 1] = '\0';
       }
 
+      char* badspaces = NULL;
+
+      for (int i = 1; i < strlen(ptr) - 1; i++) {
+        if(ptr[i] == '<') {
+          badspaces = ptr;
+          badspaces += i + 1;
+          ptr[i] = '\0';
+        }
+        if (ptr[i] == '>') {
+          out_file = ptr;
+          out_file += i + 1;
+          ptr[i] = '\0';
+          file_out = true;
+          next_out = false;
+        }
+      }
+
       if (ptr[strlen(ptr) - 1] == '>' && strlen(ptr) > 1) { // catches output redirects attached to first command
         next_out = true;
         ptr[strlen(ptr) - 1] = '\0';
@@ -148,6 +165,12 @@ int parser(char* input, char* delim) {
       } else if (ptr[0] != '&') { // if normal command, save to args and increment
         *iter++ = ptr;
         commands++;
+      }
+
+      if (badspaces != NULL) {
+        *iter++ = badspaces;
+        commands++;
+        badspaces = NULL;
       }
       ptr = strtok(NULL, delim);
   }
@@ -206,8 +229,8 @@ int main(int argc, char* argv[], char** envp) {
   char input[MAX_CONSOLE_INPUT]; // command line input from user
   char* fargv[MAX_CONSOLE_TOKENS];
 
-  int stdin_copy = dup(0);
-  int stdout_copy = dup(1);
+  int stdinOrig = dup(0);
+  int stdoutOrig = dup(1);
 
   // checks for supressing output
   print = true;
@@ -226,8 +249,8 @@ int main(int argc, char* argv[], char** envp) {
       background = false;
 
       // ensures that stdin and stdout are reopened before accepting new commands
-      dup2(stdin_copy, 0);
-      dup2(stdout_copy, 1);
+      dup2(stdinOrig, 0);
+      dup2(stdoutOrig, 1);
 
       if (print) { printf("my_shell$ "); }
 
