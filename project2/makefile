@@ -1,8 +1,12 @@
-#CC=gcc -g -Wall -Werror -std=gnu99
-CC=gcc -std=c99 -Wall
+CC=gcc -Wall -g
+#CC=gcc -Wall -g -m32
 
-all: threads.c
-	$(CC) -o threads.o threads.c
+all: threads main.c
+	$(CC) -o main main.c threads.o
+
+threads: threads.c
+	$(CC) -c -o threads.o threads.c
 
 clean:
-	rm threads.o
+	rm main threads.o
+	rm -r main.dSYM
