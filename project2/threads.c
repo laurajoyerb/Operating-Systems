@@ -1,22 +1,42 @@
 #include <stdio.h>
 #include <unistd.h>
-#include<pthread.h>
+#include <pthread.h>
 #include <stdlib.h>
+#include <setjmp.h>
+#include <stdbool.h>
 
-// struct thread {
-// 	pthread_t id;
-// 	// Information about the state of the thread (set of registers)
-//
-// 	// Information about its stack (pointer to stack area)
-// 	Information about status of thread (ready, running, exited)
-// }
+#define MAX_THREADS 128
 
+// states of threads
+#define READY 0
+#define RUNNING 1
+#define EXITED 2
+
+bool initialized = false;
+
+struct thread {
+	pthread_t id;
+  jmp_buf reg;
+  int state;
+  int* rsp;
+};
+
+// array to hold all threads
+struct thread processThreads[MAX_THREADS];
+
+void initialize() {
+	initialized = true;
+	printf("intitializing\n");
+}
 
 int pthread_create(
   pthread_t *thread,
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
+		if (!initialized) {
+			initialize();
+		}
     return 0;
 }
 
@@ -28,8 +48,3 @@ pthread_t pthread_self(void) {
   pthread_t foo = NULL;
   return foo;
 }
-// 
-// int main()
-// {
-//     return 0;
-// }
