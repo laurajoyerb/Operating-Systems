@@ -62,9 +62,9 @@ int pthread_create(
 			setjmp(processThreads[activeThreads].reg);
 
 			// manually set start routine
-			processThreads[activeThreads].reg[JB_PC] = ptr_mangle((unsigned long) start_thunk);
-			processThreads[activeThreads].reg[JB_R13] = ptr_mangle((unsigned long) arg);
-			processThreads[activeThreads].reg[JB_R12] = ptr_mangle((unsigned long) start_routine);
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = ptr_mangle((unsigned long) arg);
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = ptr_mangle((unsigned long) start_routine);
 
 			activeThreads++;
 		}
