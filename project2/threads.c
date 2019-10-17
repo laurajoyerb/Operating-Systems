@@ -82,6 +82,19 @@ int pthread_create(
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = (unsigned long) arg;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = (unsigned long) start_routine;
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP] = ptr_mangle((unsigned long) processThreads[activeThreads].rsp);
+
+			printf("RBX: 0x%08lx\nRBP: 0x%08lx\nR12: 0x%08lx\nR13: 0x%08lx\nR14: \
+	0x%08lx\nR15: 0x%08lx\nSP:  0x%08lx\nPC:  0x%08lx\n",
+	        processThreads[activeThreads].reg[0].__jmpbuf[JB_RBX], processThreads[activeThreads].reg[0].__jmpbuf[JB_RBP],
+	        processThreads[activeThreads].reg[0].__jmpbuf[JB_R12], processThreads[activeThreads].reg[0].__jmpbuf[JB_R13],
+	        processThreads[activeThreads].reg[0].__jmpbuf[JB_R14], processThreads[activeThreads].reg[0].__jmpbuf[JB_R15],
+	        processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP], processThreads[activeThreads].reg[0].__jmpbuf[JB_PC]);
+
+	    printf("RSPd:0x%08lx\nPCd: 0x%08lx\n",
+	        ptr_demangle(processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP]),
+	        ptr_demangle(processThreads[activeThreads].reg[0].__jmpbuf[JB_PC])
+	        );
 
 			activeThreads++;
 
