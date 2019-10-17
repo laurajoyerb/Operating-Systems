@@ -1,6 +1,8 @@
 #ifndef __EC440THREADS__
 #define __EC440THREADS__
 
+#include <stdio.h>
+
 unsigned long int ptr_demangle(unsigned long int p)
 {
     unsigned long int ret;
@@ -42,6 +44,7 @@ void wr13(unsigned long int p)
 }
 
 void *start_thunk() {
+  printf("inside of start thunk\n");
   asm("popq %%rbp;\n"           //clean up the function prolog
       "movq %%r13, %%rdi;\n"    //put arg in $rdi
       "pushq %%r12;\n"          //push &start_routine
@@ -50,6 +53,7 @@ void *start_thunk() {
       :
       : "%rdi"
   );
+  printf("out of asm\n");
   __builtin_unreachable();
 }
 

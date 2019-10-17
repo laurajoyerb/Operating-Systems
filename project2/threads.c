@@ -25,6 +25,7 @@
 
 bool initialized = false;
 int activeThreads = 0;
+int currentThread;
 
 struct thread {
 	pthread_t id;
@@ -38,12 +39,28 @@ struct thread processThreads[MAX_THREADS];
 
 void initialize() {
 	initialized = true;
+	currentThread = 0;
 
 	processThreads[0].id = 0;
 	processThreads[0].state = READY;
 	processThreads[0].rsp = NULL;
 	setjmp(processThreads[0].reg);
 	activeThreads++;
+}
+
+void schedule() {
+	printf("scheduling\n");
+	setjmp(processThreads[currentThread].reg); // saves previous threads stuff
+
+	if (activeThreads > currentThread) {
+		currentThread++;
+		while (activeThreads > currentThread && processThreads[currentThread].state != READY) {
+			currentThread++;
+		}
+		printf("found next thread, it's: %d\n", currentThread);
+
+		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
+	}
 }
 
 int pthread_create(
@@ -63,10 +80,12 @@ int pthread_create(
 
 			// manually set start routine
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
-			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = ptr_mangle((unsigned long) arg);
-			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = ptr_mangle((unsigned long) start_routine);
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = (unsigned long) arg;
+			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = (unsigned long) start_routine;
 
 			activeThreads++;
+
+			schedule();
 		}
 
     return 0;
