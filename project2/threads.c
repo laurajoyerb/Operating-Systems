@@ -78,6 +78,8 @@ int pthread_create(
 			processThreads[activeThreads].rsp = malloc(32767);
 			setjmp(processThreads[activeThreads].reg);
 
+			processThreads[activeThreads].rsp[32767/4 - 2] = (unsigned long) pthread_exit;
+
 			// manually set start routine
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = (unsigned long) arg;
@@ -105,6 +107,11 @@ int pthread_create(
 }
 
 void pthread_exit(void *value_ptr) {
+	printf("exiting\n");
+	// processThreads[currentThread].state = EXITED;
+	// processThreads[currentThread].rsp = NULL;
+	// activeThreads--;
+	// schedule();
   exit(0);
 }
 
