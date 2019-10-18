@@ -75,10 +75,10 @@ int pthread_create(
 		if (activeThreads < MAX_THREADS) {
 			processThreads[activeThreads].id = *thread;
 			processThreads[activeThreads].state = READY;
-			processThreads[activeThreads].rsp = malloc(32767);
+			int* bottom = malloc(32767);
+			processThreads[activeThreads].rsp = bottom + 32767 - 8;
+			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit;
 			setjmp(processThreads[activeThreads].reg);
-
-			processThreads[activeThreads].rsp[32767/4 - 2] = (unsigned long) pthread_exit;
 
 			// manually set start routine
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
