@@ -2,7 +2,7 @@
 #include<pthread.h>
 #include<stdlib.h>
 
-#define THREAD_CNT 3
+#define THREAD_CNT 2
 
 // waste some time
 void *count(void *arg) {

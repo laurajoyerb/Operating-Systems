@@ -41,9 +41,9 @@ struct thread {
 struct thread processThreads[MAX_THREADS];
 
 void schedule() {
-	printf("scheduling\n");
+	printf("check: scheduling\n");
 	if (setjmp(processThreads[currentThread].reg) == 0) {
-		printf("stopping thread %d, finding next one\n", currentThread);
+		printf("check: stopping thread %d, finding next one\n", currentThread);
 		processThreads[currentThread].state = READY;
 		if (activeThreads <= currentThread) {
 			currentThread = 0;
@@ -52,20 +52,32 @@ void schedule() {
 		}
 
 		while (processThreads[currentThread].state != READY) {
+			printf("check: it wasn't thread %d. Incrementing\n", currentThread);
 			currentThread++;
 			if (activeThreads > currentThread) {
+				printf("check: wrapping around back to thread 0. Active Threads: %d, Current Thread: %d\n", activeThreads, currentThread);
 				currentThread = 0;
 			}
 		}
-		printf("found next thread, it's: %d\n", currentThread);
+		printf("check: found next thread, it's: %d\n", currentThread);
+
+		sigset_t ss;
+		sigemptyset(&ss);
+		sigaddset(&ss, SIGALRM);
+		sigprocmask(SIG_UNBLOCK, &ss, NULL);
 
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
-		printf("trying to start up thread %d\n", currentThread);
+		printf("check: trying to start up thread %d\n", currentThread);
+		sigset_t ss;
+		sigemptyset(&ss);
+		sigaddset(&ss, SIGALRM);
+		sigprocmask(SIG_UNBLOCK, &ss, NULL);
 	}
 }
 
 void initialize() {
+	printf("check: initializing\n");
 	initialized = true;
 	currentThread = 0;
 
@@ -75,10 +87,21 @@ void initialize() {
 	setjmp(processThreads[0].reg);
 	activeThreads++;
 
-	struct sigaction sa;
-	memset(&sa, 0, sizeof(sa));
-	sa.sa_sigaction = schedule;
-	sigaction(SIGALRM, &sa, NULL);
+	// struct sigaction sa;
+	// memset(&sa, 0, sizeof(sa));
+	// sa.sa_sigaction = schedule;
+	// sa.sa_flags = SA_NODEFER;
+	// sigaction(SIGALRM, &sa, NULL);
+
+	// struct itimerval timer;
+  // timer.it_value.tv_usec = 50*1000 * 10;
+  // timer.it_value.tv_sec = 0;
+  // timer.it_interval.tv_usec = 50*1000 * 10;
+  // timer.it_interval.tv_sec = 0;
+  // if(setitimer(ITIMER_REAL, &timer, NULL) == -1){
+  //         printf("ERROR: Timer could not be initialized\n");
+  //         exit(-1);
+  // }
 }
 
 int pthread_create(
@@ -86,24 +109,32 @@ int pthread_create(
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
-		printf("creating a thread\n");
+		printf("check: creating a thread\n");
 		if (!initialized) {
 			initialize();
 		}
 
 		if (activeThreads < MAX_THREADS) {
+			printf("active threads: %d\n", activeThreads);
 			processThreads[activeThreads].id = *thread;
+			printf("boom\n");
 			processThreads[activeThreads].state = READY;
+			printf("shaka\n");
 			int* bottom = malloc(32767);
+			printf("laka\n");
 			processThreads[activeThreads].rsp = bottom + 32767 - 8;
+			printf("baby\n");
 			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit;
+			printf("made it to line 124\n");
 			setjmp(processThreads[activeThreads].reg);
+			printf("made it to line 126\n");
 
 			// manually set start routine
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = (unsigned long) arg;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = (unsigned long) start_routine;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP] = ptr_mangle((unsigned long) processThreads[activeThreads].rsp);
+			printf("made it to line 133\n");
 
 			activeThreads++;
 
@@ -114,7 +145,12 @@ int pthread_create(
 }
 
 void pthread_exit(void *value_ptr) {
-	printf("exiting\n");
+	printf("check: exiting thread %d\n", currentThread);
+	sigset_t ss;
+	sigemptyset(&ss);
+	sigaddset(&ss, SIGALRM);
+	sigprocmask(SIG_BLOCK, &ss, NULL);
+
 	processThreads[currentThread].state = EXITED;
 	processThreads[currentThread].rsp = NULL;
 	activeThreads--;
@@ -123,6 +159,6 @@ void pthread_exit(void *value_ptr) {
 }
 
 pthread_t pthread_self(void) {
-	printf("returning thread id\n");
+	// printf("check: return id %d\n", currentThread);
   return processThreads[currentThread].id;
 }
