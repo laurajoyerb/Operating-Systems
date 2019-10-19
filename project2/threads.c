@@ -5,6 +5,9 @@
 #include <setjmp.h>
 #include <stdbool.h>
 #include "ec440threads.h"
+#include <sys/time.h>
+#include <signal.h>
+#include <string.h>
 
 #define MAX_THREADS 128
 
@@ -37,6 +40,31 @@ struct thread {
 // array to hold all threads
 struct thread processThreads[MAX_THREADS];
 
+void schedule() {
+	printf("scheduling\n");
+	if (setjmp(processThreads[currentThread].reg) == 0) {
+		printf("stopping thread %d, finding next one\n", currentThread);
+		processThreads[currentThread].state = READY;
+		if (activeThreads <= currentThread) {
+			currentThread = 0;
+		} else {
+			currentThread++;
+		}
+
+		while (processThreads[currentThread].state != READY) {
+			currentThread++;
+			if (activeThreads > currentThread) {
+				currentThread = 0;
+			}
+		}
+		printf("found next thread, it's: %d\n", currentThread);
+
+		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
+	} else {
+		printf("trying to start up thread %d\n", currentThread);
+	}
+}
+
 void initialize() {
 	initialized = true;
 	currentThread = 0;
@@ -46,21 +74,11 @@ void initialize() {
 	processThreads[0].rsp = NULL;
 	setjmp(processThreads[0].reg);
 	activeThreads++;
-}
 
-void schedule() {
-	printf("scheduling\n");
-	setjmp(processThreads[currentThread].reg); // saves previous threads stuff
-
-	if (activeThreads > currentThread) {
-		currentThread++;
-		while (activeThreads > currentThread && processThreads[currentThread].state != READY) {
-			currentThread++;
-		}
-		printf("found next thread, it's: %d\n", currentThread);
-
-		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
-	}
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_sigaction = schedule;
+	sigaction(SIGALRM, &sa, NULL);
 }
 
 int pthread_create(
@@ -68,6 +86,7 @@ int pthread_create(
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
+		printf("creating a thread\n");
 		if (!initialized) {
 			initialize();
 		}
@@ -86,18 +105,6 @@ int pthread_create(
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = (unsigned long) start_routine;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP] = ptr_mangle((unsigned long) processThreads[activeThreads].rsp);
 
-			printf("RBX: 0x%08lx\nRBP: 0x%08lx\nR12: 0x%08lx\nR13: 0x%08lx\nR14: \
-	0x%08lx\nR15: 0x%08lx\nSP:  0x%08lx\nPC:  0x%08lx\n",
-	        processThreads[activeThreads].reg[0].__jmpbuf[JB_RBX], processThreads[activeThreads].reg[0].__jmpbuf[JB_RBP],
-	        processThreads[activeThreads].reg[0].__jmpbuf[JB_R12], processThreads[activeThreads].reg[0].__jmpbuf[JB_R13],
-	        processThreads[activeThreads].reg[0].__jmpbuf[JB_R14], processThreads[activeThreads].reg[0].__jmpbuf[JB_R15],
-	        processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP], processThreads[activeThreads].reg[0].__jmpbuf[JB_PC]);
-
-	    printf("RSPd:0x%08lx\nPCd: 0x%08lx\n",
-	        ptr_demangle(processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP]),
-	        ptr_demangle(processThreads[activeThreads].reg[0].__jmpbuf[JB_PC])
-	        );
-
 			activeThreads++;
 
 			schedule();
@@ -108,14 +115,14 @@ int pthread_create(
 
 void pthread_exit(void *value_ptr) {
 	printf("exiting\n");
-	// processThreads[currentThread].state = EXITED;
-	// processThreads[currentThread].rsp = NULL;
-	// activeThreads--;
-	// schedule();
-  exit(0);
+	processThreads[currentThread].state = EXITED;
+	processThreads[currentThread].rsp = NULL;
+	activeThreads--;
+	schedule();
+  __builtin_unreachable();
 }
 
 pthread_t pthread_self(void) {
-  pthread_t foo = NULL;
-  return foo;
+	printf("returning thread id\n");
+  return processThreads[currentThread].id;
 }
