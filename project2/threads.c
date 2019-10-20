@@ -44,17 +44,22 @@ void schedule() {
 	printf("check: scheduling\n");
 	if (setjmp(processThreads[currentThread].reg) == 0) {
 		printf("check: stopping thread %d, finding next one\n", currentThread);
-		processThreads[currentThread].state = READY;
-		if (activeThreads <= currentThread) {
+
+		 for (int i = 0; i < MAX_THREADS; i++) {
+		 		if (processThreads[i].state == EXITED) {
+					printf("looks like thread %d has exited\n", i);
+				}
+		 }
+		if (activeThreads - 1 <= currentThread) {
 			currentThread = 0;
 		} else {
 			currentThread++;
 		}
 
-		while (processThreads[currentThread].state != READY) {
+		while (processThreads[currentThread].state != READY && processThreads[currentThread].state != RUNNING) {
 			printf("check: it wasn't thread %d. Incrementing\n", currentThread);
 			currentThread++;
-			if (activeThreads > currentThread) {
+			if (activeThreads >= currentThread) {
 				printf("check: wrapping around back to thread 0. Active Threads: %d, Current Thread: %d\n", activeThreads, currentThread);
 				currentThread = 0;
 			}
@@ -87,21 +92,21 @@ void initialize() {
 	setjmp(processThreads[0].reg);
 	activeThreads++;
 
-	// struct sigaction sa;
-	// memset(&sa, 0, sizeof(sa));
-	// sa.sa_sigaction = schedule;
-	// sa.sa_flags = SA_NODEFER;
-	// sigaction(SIGALRM, &sa, NULL);
+	struct sigaction sa;
+	memset(&sa, 0, sizeof(sa));
+	sa.sa_sigaction = schedule;
+	sa.sa_flags = SA_NODEFER;
+	sigaction(SIGALRM, &sa, NULL);
 
-	// struct itimerval timer;
-  // timer.it_value.tv_usec = 50*1000 * 10;
-  // timer.it_value.tv_sec = 0;
-  // timer.it_interval.tv_usec = 50*1000 * 10;
-  // timer.it_interval.tv_sec = 0;
-  // if(setitimer(ITIMER_REAL, &timer, NULL) == -1){
-  //         printf("ERROR: Timer could not be initialized\n");
-  //         exit(-1);
-  // }
+	struct itimerval timer;
+  timer.it_value.tv_usec = 50*1000;
+  timer.it_value.tv_sec = 0;
+  timer.it_interval.tv_usec = 50*1000;
+  timer.it_interval.tv_sec = 0;
+  if(setitimer(ITIMER_REAL, &timer, NULL) == -1){
+          printf("ERROR: Timer could not be initialized\n");
+          exit(-1);
+  }
 }
 
 int pthread_create(
@@ -109,32 +114,29 @@ int pthread_create(
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
-		printf("check: creating a thread\n");
+		printf("check: creating a thread in pthread_create\n");
+		sigset_t ss;
+		sigemptyset(&ss);
+		sigaddset(&ss, SIGALRM);
+		sigprocmask(SIG_BLOCK, &ss, NULL);
 		if (!initialized) {
 			initialize();
 		}
 
 		if (activeThreads < MAX_THREADS) {
-			printf("active threads: %d\n", activeThreads);
+			printf("assigning values in pthread_create\n");
 			processThreads[activeThreads].id = *thread;
-			printf("boom\n");
 			processThreads[activeThreads].state = READY;
-			printf("shaka\n");
-			int* bottom = malloc(32767);
-			printf("laka\n");
-			processThreads[activeThreads].rsp = bottom + 32767 - 8;
-			printf("baby\n");
+			int* bottom = malloc(32767/4);
+			processThreads[activeThreads].rsp = bottom + 32767/4 - 8;
 			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit;
-			printf("made it to line 124\n");
 			setjmp(processThreads[activeThreads].reg);
-			printf("made it to line 126\n");
 
 			// manually set start routine
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_PC] = ptr_mangle((unsigned long) start_thunk);
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R13] = (unsigned long) arg;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_R12] = (unsigned long) start_routine;
 			processThreads[activeThreads].reg[0].__jmpbuf[JB_RSP] = ptr_mangle((unsigned long) processThreads[activeThreads].rsp);
-			printf("made it to line 133\n");
 
 			activeThreads++;
 
@@ -146,6 +148,7 @@ int pthread_create(
 
 void pthread_exit(void *value_ptr) {
 	printf("check: exiting thread %d\n", currentThread);
+	printf("check: there are currently %d threads active (including the one exiting right now)\n", activeThreads);
 	sigset_t ss;
 	sigemptyset(&ss);
 	sigaddset(&ss, SIGALRM);
