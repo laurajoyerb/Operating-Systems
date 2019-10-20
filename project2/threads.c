@@ -44,10 +44,11 @@ void schedule() {
 	printf("check: scheduling\n");
 	if (setjmp(processThreads[currentThread].reg) == 0) {
 		printf("check: stopping thread %d, finding next one\n", currentThread);
-
-		 for (int i = 0; i < MAX_THREADS; i++) {
+		int i;
+		 for (i = 0; i < MAX_THREADS; i++) {
 		 		if (processThreads[i].state == EXITED) {
 					printf("looks like thread %d has exited\n", i);
+					free(processThreads[i].rsp);
 				}
 		 }
 		if (activeThreads - 1 <= currentThread) {
