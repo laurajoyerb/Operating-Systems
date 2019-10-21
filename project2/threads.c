@@ -13,7 +13,6 @@
 
 // states of threads
 #define READY 0
-#define RUNNING 1
 #define EXITED 2
 
 // registers of jump buf
@@ -41,13 +40,10 @@ struct thread {
 struct thread processThreads[MAX_THREADS];
 
 void schedule() {
-	printf("check: scheduling\n");
 	if (setjmp(processThreads[currentThread].reg) == 0) {
-		printf("check: stopping thread %d, finding next one\n", currentThread);
 		int i;
 		 for (i = 0; i < MAX_THREADS; i++) {
 		 		if (processThreads[i].state == EXITED) {
-					printf("looks like thread %d has exited\n", i);
 					free(processThreads[i].rsp);
 				}
 		 }
@@ -57,15 +53,12 @@ void schedule() {
 			currentThread++;
 		}
 
-		while (processThreads[currentThread].state != READY && processThreads[currentThread].state != RUNNING) {
-			printf("check: it wasn't thread %d. Incrementing\n", currentThread);
+		while (processThreads[currentThread].state != READY) {
 			currentThread++;
 			if (activeThreads >= currentThread) {
-				printf("check: wrapping around back to thread 0. Active Threads: %d, Current Thread: %d\n", activeThreads, currentThread);
 				currentThread = 0;
 			}
 		}
-		printf("check: found next thread, it's: %d\n", currentThread);
 
 		sigset_t ss;
 		sigemptyset(&ss);
@@ -74,7 +67,6 @@ void schedule() {
 
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
-		printf("check: trying to start up thread %d\n", currentThread);
 		sigset_t ss;
 		sigemptyset(&ss);
 		sigaddset(&ss, SIGALRM);
@@ -83,7 +75,6 @@ void schedule() {
 }
 
 void initialize() {
-	printf("check: initializing\n");
 	initialized = true;
 	currentThread = 0;
 
@@ -115,7 +106,6 @@ int pthread_create(
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
-		printf("check: creating a thread in pthread_create\n");
 		sigset_t ss;
 		sigemptyset(&ss);
 		sigaddset(&ss, SIGALRM);
@@ -125,7 +115,6 @@ int pthread_create(
 		}
 
 		if (activeThreads < MAX_THREADS) {
-			printf("assigning values in pthread_create\n");
 			processThreads[activeThreads].id = *thread;
 			processThreads[activeThreads].state = READY;
 			int* bottom = malloc(32767/4);
@@ -148,8 +137,6 @@ int pthread_create(
 }
 
 void pthread_exit(void *value_ptr) {
-	printf("check: exiting thread %d\n", currentThread);
-	printf("check: there are currently %d threads active (including the one exiting right now)\n", activeThreads);
 	sigset_t ss;
 	sigemptyset(&ss);
 	sigaddset(&ss, SIGALRM);
@@ -163,6 +150,5 @@ void pthread_exit(void *value_ptr) {
 }
 
 pthread_t pthread_self(void) {
-	// printf("check: return id %d\n", currentThread);
   return processThreads[currentThread].id;
 }
