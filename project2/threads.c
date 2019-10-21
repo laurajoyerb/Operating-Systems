@@ -127,8 +127,8 @@ int pthread_create(
 		if (activeThreads < MAX_THREADS) {
 			processThreads[activeThreads].id = *thread;
 			processThreads[activeThreads].state = READY;
-			int* bottom = malloc(32767/4);
-			processThreads[activeThreads].rsp = bottom + 32767/4 - 8;
+			void* bottom = malloc(32767);
+			processThreads[activeThreads].rsp = bottom + 32767 - 8;
 			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit;
 			setjmp(processThreads[activeThreads].reg);
 
