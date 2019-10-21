@@ -13,7 +13,7 @@
 
 // states of threads
 #define READY 0
-#define EXITED 2
+#define EXITED 1
 
 // registers of jump buf
 #define JB_RBX 0
@@ -41,25 +41,31 @@ struct thread processThreads[MAX_THREADS];
 
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {
+
+		// frees memory from exited threads
 		int i;
 		 for (i = 0; i < MAX_THREADS; i++) {
 		 		if (processThreads[i].state == EXITED) {
 					free(processThreads[i].rsp);
 				}
 		 }
+		 // wraps around back to 0 if necessary
 		if (activeThreads - 1 <= currentThread) {
 			currentThread = 0;
 		} else {
 			currentThread++;
 		}
 
+		// finds next ready thread
 		while (processThreads[currentThread].state != READY) {
 			currentThread++;
+			// wraps if necessary
 			if (activeThreads >= currentThread) {
 				currentThread = 0;
 			}
 		}
 
+		// unblocks thread
 		sigset_t ss;
 		sigemptyset(&ss);
 		sigaddset(&ss, SIGALRM);
@@ -67,6 +73,7 @@ void schedule() {
 
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
+		// unblocks threads that had previoulsy been stopped by the scheduler
 		sigset_t ss;
 		sigemptyset(&ss);
 		sigaddset(&ss, SIGALRM);
@@ -75,6 +82,7 @@ void schedule() {
 }
 
 void initialize() {
+	// runs the first time a thread is created in order to add the main process as the first thread in the TCB
 	initialized = true;
 	currentThread = 0;
 
@@ -84,19 +92,21 @@ void initialize() {
 	setjmp(processThreads[0].reg);
 	activeThreads++;
 
+	// sets up signal handler for sig alarm, points it to the schedule() function
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
 	sa.sa_sigaction = schedule;
 	sa.sa_flags = SA_NODEFER;
 	sigaction(SIGALRM, &sa, NULL);
 
+	// sets up a timer to send a sig alarm every 50ms
 	struct itimerval timer;
   timer.it_value.tv_usec = 50*1000;
   timer.it_value.tv_sec = 0;
   timer.it_interval.tv_usec = 50*1000;
   timer.it_interval.tv_sec = 0;
   if(setitimer(ITIMER_REAL, &timer, NULL) == -1){
-          printf("ERROR: Timer could not be initialized\n");
+          printf("ERROR: Timer malfunctioned\n");
           exit(-1);
   }
 }
