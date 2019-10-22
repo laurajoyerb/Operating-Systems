@@ -73,7 +73,7 @@ void schedule() {
 
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
-		// unblocks threads that had previoulsy been stopped by the scheduler
+		// unblocks threads that had previously been stopped by the scheduler
 		sigset_t ss;
 		sigemptyset(&ss);
 		sigaddset(&ss, SIGALRM);
@@ -95,14 +95,19 @@ void initialize() {
 	// sets up signal handler for sig alarm, points it to the schedule() function
 	struct sigaction sa;
 	memset(&sa, 0, sizeof(sa));
-	sa.sa_sigaction = schedule;
+	sa.sa_sigaction = schedule; // the schedule() function will handle the action for the signal SIGALRM
+	// this makes sure that the SIGALRM signal will still be processed even inside of the schedule() function
 	sa.sa_flags = SA_NODEFER;
 	sigaction(SIGALRM, &sa, NULL);
 
 	// sets up a timer to send a sig alarm every 50ms
 	struct itimerval timer;
+
+	// time until the first timer interrupt
   timer.it_value.tv_usec = 50*1000;
   timer.it_value.tv_sec = 0;
+
+	// how often the timer should go after the first time (ie, interval between alarms)
   timer.it_interval.tv_usec = 50*1000;
   timer.it_interval.tv_sec = 0;
   if(setitimer(ITIMER_REAL, &timer, NULL) == -1){
