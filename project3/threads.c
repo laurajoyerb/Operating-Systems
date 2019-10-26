@@ -116,6 +116,18 @@ void initialize() {
   }
 }
 
+void lock() {
+
+}
+
+void unlock() {
+
+};
+
+int pthread_join(pthread_t thread, void **value_ptr) {
+	return 0;
+}
+
 int pthread_create(
   pthread_t *thread,
   const pthread_attr_t *attr,
