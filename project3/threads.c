@@ -39,9 +39,17 @@ struct thread {
 // array to hold all threads
 struct thread processThreads[MAX_THREADS];
 
+void schedule();
+void initialize();
+void lock();
+void unlock();
+int pthread_join(pthread_t thread, void **value_ptr);
+int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
+void pthread_exit(void *value_ptr);
+pthread_t pthread_self(void);
+
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {
-
 		// frees memory from exited threads
 		int i;
 		 for (i = 0; i < MAX_THREADS; i++) {
@@ -64,20 +72,7 @@ void schedule() {
 				currentThread = 0;
 			}
 		}
-
-		// unblocks thread
-		sigset_t ss;
-		sigemptyset(&ss);
-		sigaddset(&ss, SIGALRM);
-		sigprocmask(SIG_UNBLOCK, &ss, NULL);
-
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
-	} else {
-		// unblocks threads that had previously been stopped by the scheduler
-		sigset_t ss;
-		sigemptyset(&ss);
-		sigaddset(&ss, SIGALRM);
-		sigprocmask(SIG_UNBLOCK, &ss, NULL);
 	}
 }
 
@@ -124,7 +119,6 @@ void lock() {
 }
 
 void unlock() {
-	// unblocks thread
 	sigset_t ss;
 	sigemptyset(&ss);
 	sigaddset(&ss, SIGALRM);
@@ -140,10 +134,6 @@ int pthread_create(
   const pthread_attr_t *attr,
   void *(*start_routine) (void *),
   void *arg) {
-		sigset_t ss;
-		sigemptyset(&ss);
-		sigaddset(&ss, SIGALRM);
-		sigprocmask(SIG_BLOCK, &ss, NULL);
 		if (!initialized) {
 			initialize();
 		}
@@ -171,11 +161,6 @@ int pthread_create(
 }
 
 void pthread_exit(void *value_ptr) {
-	sigset_t ss;
-	sigemptyset(&ss);
-	sigaddset(&ss, SIGALRM);
-	sigprocmask(SIG_BLOCK, &ss, NULL);
-
 	processThreads[currentThread].state = EXITED;
 	processThreads[currentThread].rsp = NULL;
 	activeThreads--;
