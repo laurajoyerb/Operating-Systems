@@ -117,11 +117,18 @@ void initialize() {
 }
 
 void lock() {
-
+	sigset_t ss;
+	sigemptyset(&ss);
+	sigaddset(&ss, SIGALRM);
+	sigprocmask(SIG_BLOCK, &ss, NULL);
 }
 
 void unlock() {
-
+	// unblocks thread
+	sigset_t ss;
+	sigemptyset(&ss);
+	sigaddset(&ss, SIGALRM);
+	sigprocmask(SIG_UNBLOCK, &ss, NULL);
 };
 
 int pthread_join(pthread_t thread, void **value_ptr) {
