@@ -1,4 +1,4 @@
-#EC440 Into to Operating Systems Course
-### Project 2: User Mode Thread Library
+#EC440 Intro to Operating Systems Course
+### Project 3: Thread Synchronization
 
 written by Laura Joy Erb

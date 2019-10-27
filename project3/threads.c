@@ -14,6 +14,7 @@
 // states of threads
 #define READY 0
 #define EXITED 1
+#define BLOCKED 2
 
 // registers of jump buf
 #define JB_RBX 0
@@ -34,6 +35,7 @@ struct thread {
   jmp_buf reg;
   int state;
   int* rsp;
+	int blocked_thread;
 };
 
 // array to hold all threads
@@ -45,7 +47,9 @@ void lock();
 void unlock();
 int pthread_join(pthread_t thread, void **value_ptr);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
+void pthread_exit_wrapper();
 void pthread_exit(void *value_ptr);
+
 pthread_t pthread_self(void);
 
 void schedule() {
@@ -143,7 +147,7 @@ int pthread_create(
 			processThreads[activeThreads].state = READY;
 			void* bottom = malloc(32767);
 			processThreads[activeThreads].rsp = bottom + 32767 - 8;
-			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit;
+			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit_wrapper;
 			setjmp(processThreads[activeThreads].reg);
 
 			// manually set start routine
@@ -158,6 +162,13 @@ int pthread_create(
 		}
 
     return 0;
+}
+
+void pthread_exit_wrapper()
+{
+	unsigned long int res;
+	asm("movq %%rax, %0\n":"=r"(res));
+	pthread_exit((void *) res);
 }
 
 void pthread_exit(void *value_ptr) {
