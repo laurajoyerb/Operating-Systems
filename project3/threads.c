@@ -187,6 +187,7 @@ int pthread_create(
 		}
 
 		if (activeThreads < MAX_THREADS) {
+			lock();
 			processThreads[activeThreads].id = *thread;
 			processThreads[activeThreads].blocked_thread = -1;
 			processThreads[0].num_blocks = 0;
