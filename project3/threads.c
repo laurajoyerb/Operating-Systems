@@ -38,7 +38,7 @@ struct thread {
 	int blocked_thread;
 	int num_blocks;
 	void* exit_status;
-	void* store_exit_status;
+	void** store_exit_status;
 };
 
 // array to hold all threads
@@ -157,7 +157,10 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 	processThreads[target].blocked_thread = currentThread;
 	if (value_ptr != NULL) {
 		// *value_ptr = processThreads[target].exit_status;
-		processThreads[target].store_exit_status = *value_ptr;
+		processThreads[target].store_exit_status = value_ptr;
+		printf("In join for thread %d, value_ptr is not null\n", currentThread);
+	} else {
+		printf("In join for thread %d, value_ptr IS NULL\n", currentThread);
 	}
 	// processThreads[target].store_exit_status = *value_ptr;
 	processThreads[currentThread].state = BLOCKED;
@@ -212,7 +215,8 @@ void pthread_exit(void *value_ptr) {
 	processThreads[currentThread].rsp = NULL;
 	processThreads[currentThread].exit_status = value_ptr;
 	if (processThreads[currentThread].store_exit_status != NULL) {
-		processThreads[currentThread].store_exit_status = value_ptr;
+		*(processThreads[currentThread].store_exit_status) = value_ptr;
+		printf("In exit for thread %d, storing exit status at pointer\n", currentThread);
 	}
 	printf("Thread %d value_ptr from pthread exit is: %ld\n", currentThread, (unsigned long int)value_ptr);
 	printf("Thread %d value_ptr from pthread exit (using thread block) is: %ld\n", currentThread, (unsigned long int)processThreads[currentThread].exit_status);
