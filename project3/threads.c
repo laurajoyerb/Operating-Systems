@@ -154,7 +154,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 
 	processThreads[target].blocked_thread = currentThread;
 	value_ptr = &processThreads[target].exit_status;
-	processThreads[target].store_exit_status = *value_ptr;
+	// processThreads[target].store_exit_status = *value_ptr;
 	processThreads[currentThread].state = BLOCKED;
 	printf("finished blocking thread %d, should not be scheduled\n", currentThread);
 	processThreads[currentThread].num_blocks++;
