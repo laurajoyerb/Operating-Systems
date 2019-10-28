@@ -140,6 +140,7 @@ void unlock() {
 };
 
 int pthread_join(pthread_t thread, void **value_ptr) {
+	lock();
 	int target = 1;
 
 	while (processThreads[target].id != thread) {
@@ -154,6 +155,7 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 		if (value_ptr != NULL) {
 			*value_ptr = processThreads[target].exit_status;
 		}
+		unlock();
 		return 0;
 	}
 
