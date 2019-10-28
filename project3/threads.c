@@ -79,11 +79,15 @@ void schedule() {
 				currentThread = 0;
 			}
 		}
+		unlock();
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
+	} else {
+		unlock();
 	}
 }
 
 void initialize() {
+	lock();
 	// runs the first time a thread is created in order to add the main process as the first thread in the TCB
 	initialized = true;
 	currentThread = 0;
@@ -118,6 +122,7 @@ void initialize() {
           printf("ERROR: Timer malfunctioned\n");
           exit(-1);
   }
+	unlock();
 }
 
 void lock() {
@@ -211,6 +216,7 @@ void pthread_exit_wrapper()
 }
 
 void pthread_exit(void *value_ptr) {
+	lock();
 	processThreads[currentThread].state = EXITED;
 	processThreads[currentThread].rsp = NULL;
 	processThreads[currentThread].exit_status = value_ptr;

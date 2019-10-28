@@ -14,7 +14,7 @@ void *count(void *arg) {
 			printf("tid: 0x%x Just counted to %d of %ld\n", (unsigned int)pthread_self(), i, c);
 		}
 	}
-    return arg;
+  return arg;
 }
 
 void *stringCount(void *arg) {
@@ -22,10 +22,11 @@ void *stringCount(void *arg) {
 	int i;
 	for (i = 0; i < c; i++) {
 		if ((i % 100000) == 0) {
-			printf("tid: 0x%x Just counted to %d of %ld\n", (unsigned int)pthread_self(), i, c);
+			printf("tid: 0x%x Doing string things\n", (unsigned int)pthread_self());
 		}
 	}
-    return arg;
+	printf("Thread %d: I'm done now\n", (unsigned int)pthread_self());
+  return arg;
 }
 
 int main(int argc, char **argv) {
