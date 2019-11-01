@@ -36,6 +36,9 @@ struct thread {
   int state;
   int* rsp;
 	int blocked_thread;
+	int num_blocks;
+	void* exit_status;
+	void** store_exit_status;
 };
 
 // array to hold all threads
@@ -49,7 +52,6 @@ int pthread_join(pthread_t thread, void **value_ptr);
 int pthread_create(pthread_t *thread, const pthread_attr_t *attr, void *(*start_routine) (void *), void *arg);
 void pthread_exit_wrapper();
 void pthread_exit(void *value_ptr);
-
 pthread_t pthread_self(void);
 
 void schedule() {
@@ -69,24 +71,31 @@ void schedule() {
 		}
 
 		// finds next ready thread
-		while (processThreads[currentThread].state != READY) {
+		while (processThreads[currentThread].state != READY || currentThread >= MAX_THREADS) {
+			printf("Thread %d state is: %d\n", currentThread, processThreads[currentThread].state);
 			currentThread++;
 			// wraps if necessary
-			if (activeThreads >= currentThread) {
+			if (currentThread >= activeThreads) {
 				currentThread = 0;
 			}
 		}
+		unlock();
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
+	} else {
+		unlock();
 	}
 }
 
 void initialize() {
+	lock();
 	// runs the first time a thread is created in order to add the main process as the first thread in the TCB
 	initialized = true;
 	currentThread = 0;
 
 	processThreads[0].id = 0;
 	processThreads[0].state = READY;
+	processThreads[0].blocked_thread = -1;
+	processThreads[0].num_blocks = 0;
 	processThreads[0].rsp = NULL;
 	setjmp(processThreads[0].reg);
 	activeThreads++;
@@ -113,6 +122,7 @@ void initialize() {
           printf("ERROR: Timer malfunctioned\n");
           exit(-1);
   }
+	unlock();
 }
 
 void lock() {
@@ -130,6 +140,40 @@ void unlock() {
 };
 
 int pthread_join(pthread_t thread, void **value_ptr) {
+	lock();
+	int target = 1;
+
+	while (processThreads[target].id != thread) {
+		target++;
+		if (target >= 128) {
+			printf("Error: Target thread could not be identified, no match for %x\n", (unsigned int) thread);
+			return -1;
+		}
+	}
+	if (processThreads[target].state == EXITED) {
+		printf("Blocking thread %d with address %x until thread %d with address %x finishes --> also though it already finished\n", currentThread, (unsigned int)pthread_self(), target, (unsigned int)processThreads[target].id);
+		if (value_ptr != NULL) {
+			*value_ptr = processThreads[target].exit_status;
+		}
+		unlock();
+		return 0;
+	}
+
+	printf("Blocking thread %d with address %x until thread %d with address %x finishes\n", currentThread, (unsigned int)pthread_self(), target, (unsigned int)processThreads[target].id);
+
+	processThreads[target].blocked_thread = currentThread;
+	if (value_ptr != NULL) {
+		// *value_ptr = processThreads[target].exit_status;
+		processThreads[target].store_exit_status = value_ptr;
+		printf("In join for thread %d, value_ptr is not null\n", currentThread);
+	} else {
+		printf("In join for thread %d, value_ptr IS NULL\n", currentThread);
+	}
+	// processThreads[target].store_exit_status = *value_ptr;
+	processThreads[currentThread].state = BLOCKED;
+	printf("finished blocking thread %d, should not be scheduled\n", currentThread);
+	processThreads[currentThread].num_blocks++;
+	schedule();
 	return 0;
 }
 
@@ -143,10 +187,13 @@ int pthread_create(
 		}
 
 		if (activeThreads < MAX_THREADS) {
+			lock();
 			processThreads[activeThreads].id = *thread;
+			processThreads[activeThreads].blocked_thread = -1;
+			processThreads[0].num_blocks = 0;
 			processThreads[activeThreads].state = READY;
 			void* bottom = malloc(32767);
-			processThreads[activeThreads].rsp = bottom + 32767 - 8;
+			processThreads[activeThreads].rsp = bottom + 32767 - sizeof(unsigned long);
 			*(processThreads[activeThreads].rsp) = (unsigned long) &pthread_exit_wrapper;
 			setjmp(processThreads[activeThreads].reg);
 
@@ -172,9 +219,28 @@ void pthread_exit_wrapper()
 }
 
 void pthread_exit(void *value_ptr) {
+	lock();
 	processThreads[currentThread].state = EXITED;
 	processThreads[currentThread].rsp = NULL;
-	activeThreads--;
+	processThreads[currentThread].exit_status = value_ptr;
+	if (processThreads[currentThread].store_exit_status != NULL) {
+		*(processThreads[currentThread].store_exit_status) = value_ptr;
+		printf("In exit for thread %d, storing exit status at pointer\n", currentThread);
+	}
+	printf("Thread %d value_ptr from pthread exit is: %ld\n", currentThread, (unsigned long int)value_ptr);
+	printf("Thread %d value_ptr from pthread exit (using thread block) is: %ld\n", currentThread, (unsigned long int)processThreads[currentThread].exit_status);
+
+	int blocked_thread = processThreads[currentThread].blocked_thread;
+	if (blocked_thread != -1) {
+		processThreads[blocked_thread].num_blocks--;
+		if (
+				processThreads[blocked_thread].num_blocks == 0 &&
+				processThreads[blocked_thread].state == BLOCKED
+			) {
+			processThreads[blocked_thread].state = READY;
+			printf("set thread %d back to ready to it can be scheduled\n", blocked_thread);
+		}
+	}
 	schedule();
   __builtin_unreachable();
 }
