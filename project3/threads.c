@@ -42,6 +42,12 @@ struct thread {
 	void** store_exit_status;
 };
 
+struct semaphore {
+	int counter;
+	pthread_t queue[MAX_THREADS];
+	sem_t *id;
+};
+
 // array to hold all threads
 struct thread processThreads[MAX_THREADS];
 
