@@ -30,6 +30,7 @@
 bool initialized = false;
 int activeThreads = 0;
 int currentThread;
+int numSems = 0;
 
 struct thread {
 	pthread_t id;
@@ -45,7 +46,7 @@ struct thread {
 struct semaphore {
 	int counter;
 	pthread_t queue[MAX_THREADS];
-	sem_t *id;
+	int id;
 };
 
 // array to hold all threads
@@ -65,6 +66,24 @@ int sem_init(sem_t *sem, int pshared, unsigned value);
 int sem_wait(sem_t *sem);
 int sem_post(sem_t *sem);
 int sem_destroy(sem_t *sem);
+
+int sem_init(sem_t *sem, int pshared, unsigned value) {
+	lock();
+	struct semaphore temp;
+	temp.counter = value;
+	memset(temp.queue, 0, MAX_THREADS);
+	temp.id = numSems;
+	sem->__align = temp.id;
+	numSems++;
+	unlock();
+	return 0;
+}
+
+int sem_wait(sem_t *sem) {
+	lock();
+	unlock();
+	return 0;
+}
 
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {

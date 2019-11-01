@@ -1,9 +1,12 @@
 #include<stdio.h>
 #include<pthread.h>
 #include<stdlib.h>
+#include "semaphore.h"
 
 #define THREAD_CNT 4
 #define THREAD_TOTAL 8
+
+int sem_init(sem_t *sem, int pshared, unsigned value);
 
 // waste some time
 void *count(void *arg) {
@@ -34,6 +37,9 @@ int main(int argc, char **argv) {
 	int i;
 	unsigned long int cnt = 10000000;
 	char *str = "It's working!!";
+
+	sem_t newSem;
+  sem_init(&newSem, 0, 1);
 
     //create THREAD_CNT threads
 	for(i = 0; i<THREAD_CNT; i++) {
