@@ -46,11 +46,12 @@ struct thread {
 struct semaphore {
 	int counter;
 	pthread_t queue[MAX_THREADS];
-	int id;
+	sem_t* id;
 };
 
-// array to hold all threads
+// arrays to hold all threads and semaphores
 struct thread processThreads[MAX_THREADS];
+struct semaphore processSems[MAX_THREADS];
 
 void schedule();
 void initialize();
@@ -72,8 +73,9 @@ int sem_init(sem_t *sem, int pshared, unsigned value) {
 	struct semaphore temp;
 	temp.counter = value;
 	memset(temp.queue, 0, MAX_THREADS);
-	temp.id = numSems;
-	sem->__align = temp.id;
+	temp.id = sem;
+	sem->__align = numSems;
+	processSems[numSems] = temp;
 	numSems++;
 	unlock();
 	return 0;
@@ -81,6 +83,7 @@ int sem_init(sem_t *sem, int pshared, unsigned value) {
 
 int sem_wait(sem_t *sem) {
 	lock();
+
 	unlock();
 	return 0;
 }
