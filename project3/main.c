@@ -6,6 +6,8 @@
 #define THREAD_CNT 4
 #define THREAD_TOTAL 8
 
+int number = 0;
+
 int sem_init(sem_t *sem, int pshared, unsigned value);
 int sem_wait(sem_t *sem);
 int sem_post(sem_t *sem);
@@ -17,10 +19,12 @@ void *count(void *arg) {
 	int i;
 	sem_wait(arg);
 	for (i = 0; i < c; i++) {
+		number++;
 		if ((i % 100000) == 0) {
-			printf("tid: 0x%x Just counted to %d of %ld\n", (unsigned int)pthread_self(), i, c);
+			printf("tid: 0x%x incremented number to %d\n", (unsigned int)pthread_self(), number);
 		}
 	}
+	sem_post(arg);
   return arg;
 }
 
@@ -39,7 +43,6 @@ void *stringCount(void *arg) {
 int main(int argc, char **argv) {
 	pthread_t threads[THREAD_TOTAL];
 	int i;
-	unsigned long int cnt = 10000000;
 	char *str = "It's working!!";
 
 	sem_t newSem;
@@ -61,6 +64,6 @@ int main(int argc, char **argv) {
 		}
     // But we have to make sure that main does not return before
     // the threads are done... so count some more...
-    count((void *)(cnt*(THREAD_CNT + 1)));
+    count(&newSem);
     return 0;
 }

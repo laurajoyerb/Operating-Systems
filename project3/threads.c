@@ -126,13 +126,14 @@ int sem_wait(sem_t *sem) {
 
 int sem_post(sem_t *sem) {
 	lock();
-	processSems[sem->__align].counter++;
-	if (processSems[sem->__align].counter > 0 && processSems[sem->__align].queue->first != NULL) {
+	if (processSems[sem->__align].counter == 0 && processSems[sem->__align].queue->first != NULL) {
 		int next = processSems[sem->__align].queue->first->id;
 		processThreads[next].state = READY; // unblocks next thread
 		struct threadNode* temp = processSems[sem->__align].queue->first;
 		processSems[sem->__align].queue->first = processSems[sem->__align].queue->first->next;
 		free(temp);
+	} else {
+		processSems[sem->__align].counter++;
 	}
 	unlock();
 	schedule();
