@@ -43,9 +43,20 @@ struct thread {
 	void** store_exit_status;
 };
 
+struct threadNode {
+	struct threadNode* next;
+	int id;
+};
+
+struct waitingThreads {
+	struct threadNode *first;
+	struct threadNode *last;
+	int number;
+};
+
 struct semaphore {
 	int counter;
-	pthread_t queue[MAX_THREADS];
+	struct waitingThreads *queue;
 	sem_t* id;
 };
 
@@ -72,7 +83,11 @@ int sem_init(sem_t *sem, int pshared, unsigned value) {
 	lock();
 	struct semaphore temp;
 	temp.counter = value;
-	memset(temp.queue, 0, MAX_THREADS);
+	struct waitingThreads *q = (struct waitingThreads*)malloc(sizeof(struct waitingThreads));
+	q->first = NULL;
+	q->last = NULL;
+	q->number = 0;
+	temp.queue = q;
 	temp.id = sem;
 	sem->__align = numSems;
 	processSems[numSems] = temp;
@@ -81,12 +96,31 @@ int sem_init(sem_t *sem, int pshared, unsigned value) {
 	return 0;
 }
 
-int sem_wait(sem_t *sem) {
-	lock();
-
-	unlock();
-	return 0;
-}
+// int sem_wait(sem_t *sem) {
+// 	lock();
+// 	if (processSems[sem->__align].counter == 0) {
+// 		processThreads[currentThread].state = BLOCKED;
+//
+// 		// adds to queue
+// 		struct threadNode *node = (struct threadNode*)malloc(sizeof(struct threadNode));
+// 		node->next = NULL;
+// 		node->id = currentThread;
+//
+// 		if (processSems[sem->__align].queue->first == NULL) {
+// 			processSems[sem->__align].queue->first = node;
+// 			processSems[sem->__align].queue->first->next = processSems[sem->__align].queue->last;
+// 		} else {
+// 			processSems[sem->__align].queue->last->next = node;
+// 			processSems[sem->__align].queue->last = node;
+// 		}
+// 		processSems[sem->__align].queue->number++;
+//
+// 	} else {
+// 		processSems[sem->__align].counter--;
+// 	}
+// 	unlock();
+// 	return 0;
+// }
 
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {
