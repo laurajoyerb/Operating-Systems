@@ -140,6 +140,15 @@ int sem_post(sem_t *sem) {
 	return 0;
 }
 
+int sem_destroy(sem_t *sem) {
+	lock();
+	processSems[sem->__align].counter = 0;
+	free(processSems[sem->__align].queue);
+	processSems[sem->__align].id = NULL;
+	unlock();
+	return 0;
+}
+
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {
 		// frees memory from exited threads
