@@ -96,31 +96,32 @@ int sem_init(sem_t *sem, int pshared, unsigned value) {
 	return 0;
 }
 
-// int sem_wait(sem_t *sem) {
-// 	lock();
-// 	if (processSems[sem->__align].counter == 0) {
-// 		processThreads[currentThread].state = BLOCKED;
-//
-// 		// adds to queue
-// 		struct threadNode *node = (struct threadNode*)malloc(sizeof(struct threadNode));
-// 		node->next = NULL;
-// 		node->id = currentThread;
-//
-// 		if (processSems[sem->__align].queue->first == NULL) {
-// 			processSems[sem->__align].queue->first = node;
-// 			processSems[sem->__align].queue->first->next = processSems[sem->__align].queue->last;
-// 		} else {
-// 			processSems[sem->__align].queue->last->next = node;
-// 			processSems[sem->__align].queue->last = node;
-// 		}
-// 		processSems[sem->__align].queue->number++;
-//
-// 	} else {
-// 		processSems[sem->__align].counter--;
-// 	}
-// 	unlock();
-// 	return 0;
-// }
+int sem_wait(sem_t *sem) {
+	lock();
+	if (processSems[sem->__align].counter == 0) {
+		processThreads[currentThread].state = BLOCKED;
+
+		// adds to queue
+		struct threadNode *node = (struct threadNode*)malloc(sizeof(struct threadNode));
+		node->next = NULL;
+		node->id = currentThread;
+
+		if (processSems[sem->__align].queue->first == NULL) {
+			processSems[sem->__align].queue->first = node;
+			processSems[sem->__align].queue->last = node;
+			processSems[sem->__align].queue->first->next = node;
+		} else {
+			processSems[sem->__align].queue->last->next = node;
+			processSems[sem->__align].queue->last = node;
+		}
+		processSems[sem->__align].queue->number++;
+
+	} else {
+		processSems[sem->__align].counter--;
+	}
+	unlock();
+	return 0;
+}
 
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {

@@ -7,11 +7,15 @@
 #define THREAD_TOTAL 8
 
 int sem_init(sem_t *sem, int pshared, unsigned value);
+int sem_wait(sem_t *sem);
+int sem_post(sem_t *sem);
+int sem_destroy(sem_t *sem);
 
 // waste some time
 void *count(void *arg) {
-	unsigned long int c = (unsigned long int)arg;
+	unsigned long int c = 10000000; //(unsigned long int)arg;
 	int i;
+	sem_wait(arg);
 	for (i = 0; i < c; i++) {
 		if ((i % 100000) == 0) {
 			printf("tid: 0x%x Just counted to %d of %ld\n", (unsigned int)pthread_self(), i, c);
@@ -43,7 +47,7 @@ int main(int argc, char **argv) {
 
     //create THREAD_CNT threads
 	for(i = 0; i<THREAD_CNT; i++) {
-		pthread_create(&threads[i], NULL, count, (void *)((i+1)*cnt));
+		pthread_create(&threads[i], NULL, count, &newSem);
 	}
 
 	for (i = THREAD_CNT; i < THREAD_TOTAL; i++) {
