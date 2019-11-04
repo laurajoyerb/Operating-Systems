@@ -32,6 +32,8 @@ int activeThreads = 0;
 int currentThread;
 int numSems = 0;
 
+int nextThread = -1;
+
 struct thread {
 	pthread_t id;
   jmp_buf reg;
@@ -129,6 +131,7 @@ int sem_post(sem_t *sem) {
 	if (processSems[sem->__align].counter == 0 && processSems[sem->__align].queue->first != NULL) {
 		int next = processSems[sem->__align].queue->first->id;
 		processThreads[next].state = READY; // unblocks next thread
+		nextThread = next;
 		struct threadNode* temp = processSems[sem->__align].queue->first;
 		processSems[sem->__align].queue->first = processSems[sem->__align].queue->first->next;
 		free(temp);
@@ -158,21 +161,29 @@ void schedule() {
 					free(processThreads[i].rsp);
 				}
 		 }
-		 // wraps around back to 0 if necessary
-		if (activeThreads - 1 <= currentThread) {
-			currentThread = 0;
-		} else {
-			currentThread++;
-		}
 
-		// finds next ready thread
-		while (processThreads[currentThread].state != READY || currentThread >= MAX_THREADS) {
-			currentThread++;
-			// wraps if necessary
-			if (currentThread >= activeThreads) {
-				currentThread = 0;
-			}
-		}
+		 if (nextThread != -1) {
+ 			currentThread = nextThread;
+			nextThread = -1;
+ 		} else {
+
+				// wraps around back to 0 if necessary
+			 if (activeThreads - 1 <= currentThread) {
+				 currentThread = 0;
+			 } else {
+				 currentThread++;
+			 }
+
+			 // finds next ready thread
+			 while (processThreads[currentThread].state != READY || currentThread >= MAX_THREADS) {
+				 currentThread++;
+				 // wraps if necessary
+				 if (currentThread >= activeThreads) {
+					 currentThread = 0;
+				 }
+			 }
+
+ 		}
 		unlock();
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
