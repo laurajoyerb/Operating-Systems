@@ -108,7 +108,7 @@ int sem_wait(sem_t *sem) {
 		node->next = NULL;
 		node->id = currentThread;
 
-		if (processSems[sem->__align].queue->first == NULL) {
+		if (processSems[sem->__align].queue->number == 0) {
 			processSems[sem->__align].queue->first = node;
 			processSems[sem->__align].queue->last = node;
 			processSems[sem->__align].queue->first->next = node;
@@ -128,13 +128,14 @@ int sem_wait(sem_t *sem) {
 
 int sem_post(sem_t *sem) {
 	lock();
-	if (processSems[sem->__align].counter == 0 && processSems[sem->__align].queue->first != NULL) {
+	if (processSems[sem->__align].counter == 0 && processSems[sem->__align].queue->number > 0) {
 		int next = processSems[sem->__align].queue->first->id;
 		processThreads[next].state = READY; // unblocks next thread
 		nextThread = next;
 		struct threadNode* temp = processSems[sem->__align].queue->first;
 		processSems[sem->__align].queue->first = processSems[sem->__align].queue->first->next;
 		free(temp);
+		processSems[sem->__align].queue->number--;
 	} else {
 		processSems[sem->__align].counter++;
 	}
@@ -146,6 +147,9 @@ int sem_post(sem_t *sem) {
 int sem_destroy(sem_t *sem) {
 	lock();
 	processSems[sem->__align].counter = 0;
+	if (processSems[sem->__align].queue->number > 0) {
+		printf("Not good\n");
+	}
 	free(processSems[sem->__align].queue);
 	processSems[sem->__align].id = NULL;
 	unlock();
