@@ -14,23 +14,17 @@ struct page {
   int ref_count;
 };
 
-typedef struct thread_local_storage {
+struct TLS {
   pthread_t id;
   unsigned int size;
-  unsigned int num_ages;
+  unsigned int num_pages;
   struct page ** pages;
-} TLS;
-
-struct hash_element {
-  pthread_t id;
-  TLS *tls;
-  struct hash_element *next;
 };
+
+struct TLS tls_map[128];
 
 bool initialized = false;
 int page_size;
-
-struct hash_element* hash_table[HASH_SIZE];
 
 void tls_handle_page_fault() {
   printf("page fault handled\n");
@@ -52,6 +46,17 @@ void tls_init() {
 }
 
 int tls_create(unsigned int size) {
+  if(!initialized) {
+    tls_init();
+  }
+
+  if (size < 0) {
+    return -1;
+  }
+
+
+
+
   return 0;
 }
 
