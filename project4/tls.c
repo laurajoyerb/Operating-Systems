@@ -31,6 +31,10 @@ void tls_handle_page_fault() {
 }
 
 void tls_init() {
+  int i;
+  for (i = 0; i < 128; i++) {
+    tls_map[i].id = -1;
+  }
   struct sigaction sigact;
 
   page_size = getpagesize();
