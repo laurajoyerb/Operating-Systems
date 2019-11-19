@@ -8,6 +8,7 @@
 #include <sys/time.h>
 #include <signal.h>
 #include <string.h>
+#include "semaphore.h"
 
 #define MAX_THREADS 128
 
@@ -29,6 +30,9 @@
 bool initialized = false;
 int activeThreads = 0;
 int currentThread;
+int numSems = 0;
+
+int nextThread = -1;
 
 struct thread {
 	pthread_t id;
@@ -41,8 +45,26 @@ struct thread {
 	void** store_exit_status;
 };
 
-// array to hold all threads
+struct threadNode {
+	struct threadNode* next;
+	int id;
+};
+
+struct waitingThreads {
+	struct threadNode *first;
+	struct threadNode *last;
+	int number;
+};
+
+struct semaphore {
+	int counter;
+	struct waitingThreads *queue;
+	sem_t* id;
+};
+
+// arrays to hold all threads and semaphores
 struct thread processThreads[MAX_THREADS];
+struct semaphore processSems[MAX_THREADS];
 
 void schedule();
 void initialize();
@@ -54,6 +76,86 @@ void pthread_exit_wrapper();
 void pthread_exit(void *value_ptr);
 pthread_t pthread_self(void);
 
+int sem_init(sem_t *sem, int pshared, unsigned value);
+int sem_wait(sem_t *sem);
+int sem_post(sem_t *sem);
+int sem_destroy(sem_t *sem);
+
+int sem_init(sem_t *sem, int pshared, unsigned value) {
+	lock();
+	struct semaphore temp;
+	temp.counter = value;
+	struct waitingThreads *q = (struct waitingThreads*)malloc(sizeof(struct waitingThreads));
+	q->first = NULL;
+	q->last = NULL;
+	q->number = 0;
+	temp.queue = q;
+	temp.id = sem;
+	sem->__align = numSems;
+	processSems[numSems] = temp;
+	numSems++;
+	unlock();
+	return 0;
+}
+
+int sem_wait(sem_t *sem) {
+	lock();
+	if (processSems[sem->__align].counter == 0) {
+		processThreads[currentThread].state = BLOCKED;
+
+		// adds to queue
+		struct threadNode *node = (struct threadNode*)malloc(sizeof(struct threadNode));
+		node->next = NULL;
+		node->id = currentThread;
+
+		if (processSems[sem->__align].queue->number == 0) {
+			processSems[sem->__align].queue->first = node;
+			processSems[sem->__align].queue->last = node;
+			processSems[sem->__align].queue->first->next = node;
+		} else {
+			processSems[sem->__align].queue->last->next = node;
+			processSems[sem->__align].queue->last = node;
+		}
+		processSems[sem->__align].queue->number++;
+
+	} else {
+		processSems[sem->__align].counter--;
+	}
+	unlock();
+	schedule();
+	return 0;
+}
+
+int sem_post(sem_t *sem) {
+	lock();
+	if (processSems[sem->__align].counter == 0 && processSems[sem->__align].queue->number > 0) {
+		int next = processSems[sem->__align].queue->first->id;
+		processThreads[next].state = READY; // unblocks next thread
+		nextThread = next;
+		struct threadNode* temp = processSems[sem->__align].queue->first;
+		processSems[sem->__align].queue->first = processSems[sem->__align].queue->first->next;
+		free(temp);
+		processSems[sem->__align].queue->number--;
+	} else {
+		processSems[sem->__align].counter++;
+	}
+	unlock();
+	schedule();
+	return 0;
+}
+
+int sem_destroy(sem_t *sem) {
+	lock();
+	processSems[sem->__align].counter = 0;
+	if (processSems[sem->__align].queue->number > 0) {
+		printf("Not good\n");
+	}
+	free(processSems[sem->__align].queue);
+	processSems[sem->__align].id = NULL;
+	unlock();
+	return 0;
+}
+
 void schedule() {
 	if (setjmp(processThreads[currentThread].reg) == 0) {
 		// frees memory from exited threads
@@ -63,22 +165,29 @@ void schedule() {
 					free(processThreads[i].rsp);
 				}
 		 }
-		 // wraps around back to 0 if necessary
-		if (activeThreads - 1 <= currentThread) {
-			currentThread = 0;
-		} else {
-			currentThread++;
-		}
 
-		// finds next ready thread
-		while (processThreads[currentThread].state != READY || currentThread >= MAX_THREADS) {
-			printf("Thread %d state is: %d\n", currentThread, processThreads[currentThread].state);
-			currentThread++;
-			// wraps if necessary
-			if (currentThread >= activeThreads) {
-				currentThread = 0;
-			}
-		}
+		 if (nextThread != -1) {
+ 			currentThread = nextThread;
+			nextThread = -1;
+ 		} else {
+
+				// wraps around back to 0 if necessary
+			 if (activeThreads - 1 <= currentThread) {
+				 currentThread = 0;
+			 } else {
+				 currentThread++;
+			 }
+
+			 // finds next ready thread
+			 while (processThreads[currentThread].state != READY || currentThread >= MAX_THREADS) {
+				 currentThread++;
+				 // wraps if necessary
+				 if (currentThread >= activeThreads) {
+					 currentThread = 0;
+				 }
+			 }
+
+ 		}
 		unlock();
 		longjmp(processThreads[currentThread].reg, 1); // jumps to next thread
 	} else {
@@ -151,7 +260,6 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 		}
 	}
 	if (processThreads[target].state == EXITED) {
-		printf("Blocking thread %d with address %x until thread %d with address %x finishes --> also though it already finished\n", currentThread, (unsigned int)pthread_self(), target, (unsigned int)processThreads[target].id);
 		if (value_ptr != NULL) {
 			*value_ptr = processThreads[target].exit_status;
 		}
@@ -159,19 +267,14 @@ int pthread_join(pthread_t thread, void **value_ptr) {
 		return 0;
 	}
 
-	printf("Blocking thread %d with address %x until thread %d with address %x finishes\n", currentThread, (unsigned int)pthread_self(), target, (unsigned int)processThreads[target].id);
-
 	processThreads[target].blocked_thread = currentThread;
 	if (value_ptr != NULL) {
 		// *value_ptr = processThreads[target].exit_status;
 		processThreads[target].store_exit_status = value_ptr;
-		printf("In join for thread %d, value_ptr is not null\n", currentThread);
 	} else {
-		printf("In join for thread %d, value_ptr IS NULL\n", currentThread);
 	}
 	// processThreads[target].store_exit_status = *value_ptr;
 	processThreads[currentThread].state = BLOCKED;
-	printf("finished blocking thread %d, should not be scheduled\n", currentThread);
 	processThreads[currentThread].num_blocks++;
 	schedule();
 	return 0;
@@ -225,10 +328,7 @@ void pthread_exit(void *value_ptr) {
 	processThreads[currentThread].exit_status = value_ptr;
 	if (processThreads[currentThread].store_exit_status != NULL) {
 		*(processThreads[currentThread].store_exit_status) = value_ptr;
-		printf("In exit for thread %d, storing exit status at pointer\n", currentThread);
 	}
-	printf("Thread %d value_ptr from pthread exit is: %ld\n", currentThread, (unsigned long int)value_ptr);
-	printf("Thread %d value_ptr from pthread exit (using thread block) is: %ld\n", currentThread, (unsigned long int)processThreads[currentThread].exit_status);
 
 	int blocked_thread = processThreads[currentThread].blocked_thread;
 	if (blocked_thread != -1) {
@@ -238,7 +338,6 @@ void pthread_exit(void *value_ptr) {
 				processThreads[blocked_thread].state == BLOCKED
 			) {
 			processThreads[blocked_thread].state = READY;
-			printf("set thread %d back to ready to it can be scheduled\n", blocked_thread);
 		}
 	}
 	schedule();
