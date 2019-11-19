@@ -58,6 +58,15 @@ int tls_create(unsigned int size) {
     return -1;
   }
 
+  // checks if thread already has local storage
+  int i;
+  for (i = 0; i < 128; i++) {
+    if (tls_map[i].id == pthread_self()) {
+      return -1;
+    }
+  }
+
+  // current thread has no LSA yet
 
 
 
@@ -69,6 +78,18 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
 }
 
 int tls_read(unsigned int offset, unsigned int length, char *buffer) {
+  int currTLS = -1;
+  for (currTLS = 0; currTLS < 128; currTLS++) {
+    if (tls_map[currTLS].id == pthread_self()) {
+      break;
+    }
+  }
+
+  // thread does not yet have a tls
+  if (currTLS == -1) {
+    return -1;
+  }
+
   return 0;
 }
 
