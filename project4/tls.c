@@ -4,6 +4,18 @@
 #include "semaphore.h"
 #include "tls.h"
 
+struct page {
+  unsigned int address;
+  int ref_count;
+};
+
+typedef struct thread_local_storage {
+  pthread_t id;
+  unsigned int size;
+  unsigned int num_ages;
+  struct page ** pages;
+} TLS;
+
 int tls_create(unsigned int size) {
   return 0;
 }
