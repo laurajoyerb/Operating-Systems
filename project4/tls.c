@@ -11,7 +11,7 @@
 #define HASH_SIZE 100
 
 struct page {
-  unsigned int address;
+  unsigned long int address;
   int ref_count;
 };
 
@@ -29,6 +29,20 @@ int page_size;
 
 void tls_handle_page_fault() {
   printf("page fault handled\n");
+}
+
+void tls_protect(struct page* p) {
+  if(mprotect((void *) p->address, page_size, 0)) {
+    fprintf(stderr, "tls_protect: could not protect page\n");
+    exit(1);
+  }
+}
+
+void tls_unprotect(struct page* p) {
+  if(mprotect((void *) p->address, page_size, PROT_READ | PROT_WRITE)) {
+    fprintf(stderr, "tls_unprotect: could not unprotect page\n");
+    exit(1);
+  }
 }
 
 void tls_init() {
@@ -85,9 +99,9 @@ int tls_create(unsigned int size) {
 
   for (i = 0; i < temp->num_pages; i++) {
     struct page* p = NULL; // = (struct page *) calloc(1, sizeof(struct page*));
-		p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
-		p->ref_count = 1;
-		temp->pages[i] = p;
+    p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
+    p->ref_count = 1;
+    // temp->pages[i] = p;
   }
 
   tls_map[next] = *temp;
