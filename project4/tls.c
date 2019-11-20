@@ -101,7 +101,7 @@ int tls_create(unsigned int size) {
   temp->size = size;
   temp->num_pages = (size - 1) / (page_size) + 1;
 
-  temp->pages =  (struct page**) calloc(temp->num_pages, sizeof(struct page*)); 
+  temp->pages =  (struct page**) calloc(temp->num_pages, sizeof(struct page*));
 
   for (i = 0; i < temp->num_pages; i++) {
     struct page* p = (struct page *) calloc(1, sizeof(struct page*));
@@ -229,5 +229,33 @@ int tls_destroy() {
 }
 
 int tls_clone(pthread_t tid) {
+  int idx = -1;
+  int targetTLS = -1;
+  for (idx = 0; idx < 128; idx++) {
+    if (tls_map[idx].id == pthread_self()) {
+      return -1;
+    } else if (tls_map[idx].id == tid) {
+      targetTLS = idx;
+    }
+  }
+
+  if (targetTLS == -1) {
+    return -1;
+  }
+
+  struct TLS* newTLS = (struct TLS*) calloc(1, sizeof(struct TLS));
+
+  newTLS->id = tls_map[targetTLS].id;
+  newTLS->size = tls_map[targetTLS].size;
+  newTLS->num_pages = tls_map[targetTLS].num_pages;
+
+  newTLS->pages =  (struct page**) calloc(newTLS->num_pages, sizeof(struct page*));
+
+  int i;
+  for (i = 0; i < newTLS->num_pages; i++) {
+    newTLS->pages[i] = tls_map[targetTLS].pages[i];
+    newTLS->pages[i]->ref_count++;
+  }
+
   return 0;
 }
