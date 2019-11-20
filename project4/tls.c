@@ -156,6 +156,7 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
     p = tls_map[currTLS].pages[pn];
     if (p->ref_count > 1) {
       /* this page is shared, create a private copy (COW) */
+      printf("Copying page %ld\n", p->address);
       copy = (struct page *) calloc(1, sizeof(struct page));
       copy->address = (unsigned long int) mmap(0, page_size, PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
       copy->ref_count = 1;
@@ -165,9 +166,12 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
       tls_protect(p);
       memcpy(&p, &copy, sizeof(p));
       // p = copy;
+      printf("New page address is: %ld\n", p->address);
+      tls_print();
     }
     char* dst = ((char *) p->address) + poff;
     *dst = buffer[cnt];
+    printf("Writing %c\n", buffer[cnt]);
   }
 
   for (i = 0; i < tls_map[currTLS].num_pages; i++) {
@@ -266,7 +270,7 @@ int tls_clone(pthread_t tid) {
 
   struct TLS* newTLS = (struct TLS*) calloc(1, sizeof(struct TLS));
 
-  newTLS->id = tls_map[targetTLS].id;
+  newTLS->id = pthread_self();
   newTLS->size = tls_map[targetTLS].size;
   newTLS->num_pages = tls_map[targetTLS].num_pages;
 
@@ -277,6 +281,19 @@ int tls_clone(pthread_t tid) {
     newTLS->pages[i] = tls_map[targetTLS].pages[i];
     newTLS->pages[i]->ref_count++;
   }
+
+  int next = -1;
+  for (next = 0; next < 128; next++) {
+    if (tls_map[next].id == -1) {
+      break;
+    }
+  }
+
+  if (next == -1) {
+    return -1;
+  }
+
+  tls_map[next] = *newTLS;
 
   return 0;
 }
