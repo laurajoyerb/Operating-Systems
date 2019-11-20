@@ -7,8 +7,7 @@
 #include <stdbool.h>
 #include <signal.h>
 #include <sys/mman.h>
-
-#define HASH_SIZE 100
+#include <string.h> 
 
 struct page {
   unsigned long int address;
@@ -29,6 +28,16 @@ int page_size;
 
 void tls_handle_page_fault(int sig, siginfo_t *si, void *context) {
   printf("page fault handled\n");
+  unsigned long int p_fault = ((unsigned long int) si->si_addr) & ~(page_size - 1);
+
+  int i, j;
+  for (i = 0; i < 128; i++) {
+    for (j = 0; j < tls_map[i].num_pages; j++) {
+      if (tls_map[i].pages[j]->address == p_fault) {
+        pthread_exit(NULL);
+      }
+    }
+  }
 
   signal(SIGSEGV, SIG_DFL);
   signal(SIGBUS, SIG_DFL);
@@ -154,7 +163,8 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
       /* update original page */
       p->ref_count--;
       tls_protect(p);
-      p = copy;
+      memcpy(&p, &copy, sizeof(p));
+      // p = copy;
     }
     char* dst = ((char *) p->address) + poff;
     *dst = buffer[cnt];
