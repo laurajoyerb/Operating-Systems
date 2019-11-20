@@ -7,7 +7,7 @@
 #include <stdbool.h>
 #include <signal.h>
 #include <sys/mman.h>
-#include <string.h> 
+#include <string.h>
 
 struct page {
   unsigned long int address;
@@ -232,8 +232,19 @@ int tls_destroy() {
 
   tls_map[currTLS].id = -1;
   tls_map[currTLS].size = -1;
+
+  int i;
+  for (i = 0; i < tls_map[currTLS].num_pages; i++) {
+    if (tls_map[currTLS].pages[i]->ref_count == 1) {
+      munmap( (void*) tls_map[currTLS].pages[i]->address, page_size);
+    } else {
+      tls_map[currTLS].pages[i]->ref_count--;
+    }
+  }
+
+  free(tls_map[currTLS].pages);
+
   tls_map[currTLS].num_pages = -1;
-  tls_map[currTLS].pages = NULL;
 
   return 0;
 }
