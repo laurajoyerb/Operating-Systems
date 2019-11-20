@@ -98,18 +98,66 @@ int tls_create(unsigned int size) {
   temp->num_pages = (size - 1) / (page_size) + 1;
 
   for (i = 0; i < temp->num_pages; i++) {
-    struct page* p = NULL; // = (struct page *) calloc(1, sizeof(struct page*));
-    p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
-    p->ref_count = 1;
+    // struct page* p = NULL; // = (struct page *) calloc(1, sizeof(struct page*));
+    // p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
+    // p->ref_count = 1;
     // temp->pages[i] = p;
   }
 
-  tls_map[next] = *temp;
+  // tls_map[next] = *temp;
 
   return 0;
 }
 
 int tls_write(unsigned int offset, unsigned int length, char *buffer) {
+  int currTLS;
+  bool hasTLS = false;
+  for (currTLS = 0; currTLS < 128; currTLS++) {
+    if (tls_map[currTLS].id == pthread_self()) {
+      hasTLS = true;
+      break;
+    }
+  }
+
+  if (hasTLS == false) {
+    return -1;
+  }
+
+  if (tls_map[currTLS].size < offset + length) {
+    return -1;
+  }
+
+  int i;
+  for (i = 0; i < tls_map[currTLS].num_pages; i++) {
+    tls_unprotect(tls_map[currTLS].pages[i]);
+  }
+
+  int cnt, idx;
+  for (cnt = 0, idx = offset; idx < (offset + length); ++cnt, ++idx) {
+    struct page *p, *copy;
+    unsigned int pn, poff;
+    pn = idx / page_size;
+    poff = idx % page_size;
+    p = tls_map[currTLS].pages[pn];
+    if (p->ref_count > 1) {
+      /* this page is shared, create a private copy (COW) */
+      copy = (struct page *) calloc(1, sizeof(struct page));
+      copy->address = (unsigned long int) mmap(0, page_size, PROT_WRITE, MAP_ANON | MAP_PRIVATE, 0, 0);
+      copy->ref_count = 1;
+      tls_map[currTLS].pages[pn] = copy;
+      /* update original page */
+      p->ref_count--;
+      tls_protect(p);
+      p = copy;
+    }
+    char* dst = ((char *) p->address) + poff;
+    *dst = buffer[cnt];
+  }
+
+  for (i = 0; i < tls_map[currTLS].num_pages; i++) {
+    tls_protect(tls_map[currTLS].pages[i]);
+  }
+
   return 0;
 }
 
@@ -126,10 +174,51 @@ int tls_read(unsigned int offset, unsigned int length, char *buffer) {
     return -1;
   }
 
+  if (tls_map[currTLS].size < offset + length) {
+    return -1;
+  }
+
+  int i;
+  for (i = 0; i < tls_map[currTLS].num_pages; i++) {
+    tls_unprotect(tls_map[currTLS].pages[i]);
+  }
+
+  int cnt, idx;
+  for (cnt = 0, idx = offset; idx < (offset + length); ++cnt, ++idx) {
+    struct page *p;
+    unsigned int pn, poff;
+    pn = idx / page_size;
+    poff = idx % page_size;
+    p = tls_map[currTLS].pages[pn];
+    char* src = ((char *) p->address) + poff;
+    buffer[cnt] = *src;
+  }
+
+  for (i = 0; i < tls_map[currTLS].num_pages; i++) {
+    tls_protect(tls_map[currTLS].pages[i]);
+  }
+
   return 0;
 }
 
 int tls_destroy() {
+  int currTLS = -1;
+  for (currTLS = 0; currTLS < 128; currTLS++) {
+    if (tls_map[currTLS].id == pthread_self()) {
+      break;
+    }
+  }
+
+  // thread does not yet have a tls
+  if (currTLS == -1) {
+    return -1;
+  }
+
+  tls_map[currTLS].id = -1;
+  tls_map[currTLS].size = -1;
+  tls_map[currTLS].num_pages = -1;
+  tls_map[currTLS].pages = NULL;
+
   return 0;
 }
 

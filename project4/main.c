@@ -18,10 +18,17 @@ void *test(void *arg) {
 }
 
 void *test_tls_create(void *arg) {
-    // if (tls_create(SIZE))
-    //     printf("Failed to create tls for thread 1\n");
-    // else
-    //     printf("Successfully created tls for thread 1\n");
+    if (tls_create(SIZE)) {
+      printf("Failed to create tls for thread 1\n");
+    }
+    else {
+      printf("Successfully created tls for thread 1\n");
+      if (tls_destroy()) {
+        printf("Failed to destory tls for thread 1\n");
+      } else {
+        printf("Successfully destroyed tls for thread 1\n");
+      }
+    }
 
     return NULL;
 }
