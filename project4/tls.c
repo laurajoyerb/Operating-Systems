@@ -6,6 +6,7 @@
 #include "tls.h"
 #include <stdbool.h>
 #include <signal.h>
+#include <sys/mman.h>
 
 #define HASH_SIZE 100
 
@@ -68,7 +69,28 @@ int tls_create(unsigned int size) {
 
   // current thread has no LSA yet
 
+  // finds next space new tls
+  int next = -1;
+  for (next = 0; next < 128; next++) {
+    if (tls_map[next].id == -1) {
+      break;
+    }
+  }
 
+  struct TLS* temp = calloc(1, sizeof(struct TLS));
+
+  temp->id = pthread_self();
+  temp->size = size;
+  temp->num_pages = (size - 1) / (page_size) + 1;
+
+  for (i = 0; i < temp->num_pages; i++) {
+    struct page* p = NULL; // = (struct page *) calloc(1, sizeof(struct page*));
+		p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
+		p->ref_count = 1;
+		temp->pages[i] = p;
+  }
+
+  tls_map[next] = *temp;
 
   return 0;
 }
