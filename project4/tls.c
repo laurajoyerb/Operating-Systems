@@ -27,8 +27,12 @@ struct TLS tls_map[128];
 bool initialized = false;
 int page_size;
 
-void tls_handle_page_fault() {
+void tls_handle_page_fault(int sig, siginfo_t *si, void *context) {
   printf("page fault handled\n");
+
+  signal(SIGSEGV, SIG_DFL);
+  signal(SIGBUS, SIG_DFL);
+  raise(sig);
 }
 
 void tls_protect(struct page* p) {
@@ -97,14 +101,16 @@ int tls_create(unsigned int size) {
   temp->size = size;
   temp->num_pages = (size - 1) / (page_size) + 1;
 
+  temp->pages =  (struct page**) calloc(temp->num_pages, sizeof(struct page*)); 
+
   for (i = 0; i < temp->num_pages; i++) {
-    // struct page* p = NULL; // = (struct page *) calloc(1, sizeof(struct page*));
-    // p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
-    // p->ref_count = 1;
-    // temp->pages[i] = p;
+    struct page* p = (struct page *) calloc(1, sizeof(struct page*));
+    p->address = (unsigned long int) mmap(0, page_size, 0, MAP_ANON | MAP_PRIVATE, 0, 0);
+    p->ref_count = 1;
+    temp->pages[i] = p;
   }
 
-  // tls_map[next] = *temp;
+  tls_map[next] = *temp;
 
   return 0;
 }
