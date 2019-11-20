@@ -24,12 +24,14 @@ void *test_tls_create(void *arg) {
     else {
       printf("Successfully created tls for thread 1\n");
 
+      tls_print();
+
       if (tls_destroy()) {
         printf("Failed to destory tls for thread 1\n");
       } else {
         printf("Successfully destroyed tls for thread 1\n");
       }
-      
+
     }
 
     return NULL;

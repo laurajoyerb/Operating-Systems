@@ -7,3 +7,5 @@ int tls_read(unsigned int offset, unsigned int length, char *buffer);
 int tls_destroy();
 
 int tls_clone(pthread_t tid);
+
+void tls_print();

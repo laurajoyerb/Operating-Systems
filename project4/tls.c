@@ -280,3 +280,17 @@ int tls_clone(pthread_t tid) {
 
   return 0;
 }
+
+void tls_print() {
+  // prints everything nicely for debugging
+  printf("Page Size: %d\n", page_size);
+  int i;
+  for (i = 0; i < 128; i++) {
+    if (tls_map[i].id != -1) {
+      printf("TLS Index %d:\n", i);
+      printf("\tThread %ld\n", (unsigned long int) tls_map[i].id);
+      printf("\tSize %ld \n", (unsigned long int) tls_map[i].size);
+      printf("\tPages: %d\n", tls_map[i].num_pages);
+    }
+  }
+}
