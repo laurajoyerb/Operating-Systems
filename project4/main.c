@@ -9,6 +9,7 @@
 
 bool finished = false;
 bool cloned = false;
+bool written = false;
 
 
 // can be used to test tls_clone
@@ -26,9 +27,16 @@ void *test(void *arg) {
     } else {
       printf("Successfully cloned thread 1's TLS to thread 2's\n");
       cloned = true;
+      tls_print();
+
+      while(!written) {
+      }
+
+      char buf[100];
+      tls_read(4, 6, buf);
     }
 
-    printf("Current threads: %ld, %ld\n", t2, t1);
+    printf("Current threads: %ld (%d), %ld (%d)\n", t2, 2, t1, 1);
 
     return NULL;
 }
@@ -39,20 +47,37 @@ void *test_tls_create(void *arg) {
     }
     else {
       printf("Successfully created tls for thread 1\n");
-      finished = true;
+      // finished = true;
 
       tls_print();
-      unsigned int offset = 1;
+      unsigned int offset = 4;
       char* buffer = "hello";
+
+      // while (!cloned) {
+      //   /* code */
+      // }
+
+      if (tls_write(offset, strlen(buffer), buffer)) {
+        printf("Failed to write to tls for thread 1\n");
+      } else {
+        printf("Successfully wrote to tls for thread 1\n");
+        finished = true;
+        written = true;
+
+        char buffer[100];
+        if (tls_read(offset, 6, buffer)) {
+          printf("Failed to read from tls for thread 1\n");
+        } else {
+          printf("Successfully read from tls for thread 1\n");
+        }
+      }
 
       while (!cloned) {
         /* code */
       }
 
-      tls_write(offset, strlen(buffer), buffer);
-
       if (tls_destroy()) {
-        printf("Failed to destory tls for thread 1\n");
+        printf("Failed to destroy tls for thread 1\n");
       } else {
         printf("Successfully destroyed tls for thread 1\n");
       }

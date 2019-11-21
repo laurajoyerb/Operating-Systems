@@ -34,11 +34,13 @@ void tls_handle_page_fault(int sig, siginfo_t *si, void *context) {
   for (i = 0; i < 128; i++) {
     for (j = 0; j < tls_map[i].num_pages; j++) {
       if (tls_map[i].pages[j]->address == p_fault) {
+        printf("exiting thread\n");
+        printf("TLS index %d is accessing page %d at address %ld\n", i, j, tls_map[i].pages[j]->address);
         pthread_exit(NULL);
       }
     }
   }
-
+  printf("raising default seg fault handler\n");
   signal(SIGSEGV, SIG_DFL);
   signal(SIGBUS, SIG_DFL);
   raise(sig);
@@ -138,7 +140,9 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
     return -1;
   }
 
-  if (tls_map[currTLS].size < offset + length) {
+  printf("Offset:\t%x\nLength:\t%x\nTLS Size:\t%d\n", offset, length, tls_map[currTLS].num_pages * page_size);
+  if ((tls_map[currTLS].num_pages * page_size) < (offset + length)) {
+    printf("size exceeded, exiting\n");
     return -1;
   }
 
@@ -163,15 +167,20 @@ int tls_write(unsigned int offset, unsigned int length, char *buffer) {
       tls_map[currTLS].pages[pn] = copy;
       /* update original page */
       p->ref_count--;
+      // memcpy((void *) p->address, (void *) copy->address, page_size);
       tls_protect(p);
-      memcpy(&p, &copy, sizeof(p));
-      // p = copy;
+      // memcpy(&p, &copy, sizeof(p));
+      // tls_protect(p);
+      p = copy;
+      // p->ref_count = copy->ref_count;
+      // p->address = copy->address;
+
       printf("New page address is: %ld\n", p->address);
       tls_print();
     }
     char* dst = ((char *) p->address) + poff;
     *dst = buffer[cnt];
-    printf("Writing %c\n", buffer[cnt]);
+    printf("Writing %c to %ld\n", buffer[cnt], p->address + poff);
   }
 
   for (i = 0; i < tls_map[currTLS].num_pages; i++) {
@@ -194,7 +203,8 @@ int tls_read(unsigned int offset, unsigned int length, char *buffer) {
     return -1;
   }
 
-  if (tls_map[currTLS].size < offset + length) {
+  if ((tls_map[currTLS].num_pages * page_size) < (offset + length)) {
+    printf("size exceeded, exiting\n");
     return -1;
   }
 
@@ -212,6 +222,7 @@ int tls_read(unsigned int offset, unsigned int length, char *buffer) {
     p = tls_map[currTLS].pages[pn];
     char* src = ((char *) p->address) + poff;
     buffer[cnt] = *src;
+    printf("Reading %c from %ld\n", buffer[cnt], p->address + poff);
   }
 
   for (i = 0; i < tls_map[currTLS].num_pages; i++) {
