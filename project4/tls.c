@@ -233,15 +233,17 @@ int tls_read(unsigned int offset, unsigned int length, char *buffer) {
 }
 
 int tls_destroy() {
-  int currTLS = -1;
+  int currTLS;
+  bool hasTLS = false;
   for (currTLS = 0; currTLS < 128; currTLS++) {
     if (tls_map[currTLS].id == pthread_self()) {
+      hasTLS = true;
       break;
     }
   }
 
   // thread does not yet have a tls
-  if (currTLS == -1) {
+  if (hasTLS == false) {
     return -1;
   }
 
