@@ -4,6 +4,7 @@
 
 #define MAX_F_NAME 15
 #define MAX_FILDES 64
+#define SUPER_BLOCK_NUM 0
 
 struct super_block {
   int fat_idx; // first block of FAT
@@ -45,11 +46,19 @@ int make_fs(char *disk_name) {
     return -1;
   }
 
-  if (block_write(0, "heyy") < 0) {
+  fs.fat_idx = 10;
+  fs.fat_len = 0;
+  fs.dir_idx = 20;
+  fs.dir_len = 0;
+  fs.data_idx = 30;
+
+  block_write(1, "hello world");
+
+  if (block_write(0, (char*) (&fs)) < 0) {
     printf("could not write\n");
     return -1;
   }
-  
+
   return 0;
 }
 
