@@ -1,10 +1,14 @@
-CC=gcc -Werror -Wall -g -m32
+all: fs.o
 
-all: fs main.c
-	$(CC) -lpthread -o main main.c fs.o
+main: fs.o disk.o
+	gcc -o main -Wall -g $^ main.c
 
-fs: fs.c
-	$(CC) -lpthread -c -o fs.o fs.c
+fs: fs.o disk.o
+	gcc -o $@ -Wall -g $^
+
+%.o: %.c
+	gcc -o $@ -Wall -g -c $<
 
 clean:
-	rm main fs.o
+	rm -f fs *.o *~
+	rm main
