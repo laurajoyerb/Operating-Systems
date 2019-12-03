@@ -3,7 +3,7 @@
 #include "disk.h"
 
 #define MAX_F_NAME 15
-#define MAX_FILDES 32
+#define MAX_FILDES 64
 
 struct super_block {
   int fat_idx; // first block of FAT
@@ -37,6 +37,19 @@ struct dir_entry *DIR; // Will be populated with
 //the directory data
 
 int make_fs(char *disk_name) {
+  if (make_disk(disk_name) < 0) {
+    return -1;
+  }
+
+  if (open_disk(disk_name) < 0) {
+    return -1;
+  }
+
+  if (block_write(0, "heyy") < 0) {
+    printf("could not write\n");
+    return -1;
+  }
+  
   return 0;
 }
 
