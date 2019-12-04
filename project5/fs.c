@@ -1,5 +1,7 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include <string.h>
+#include <stdbool.h>
 #include "disk.h"
 
 #define MAX_F_NAME 15
@@ -33,8 +35,8 @@ struct file_descriptor {
 
 struct super_block* fs;
 struct file_descriptor fildes[MAX_FILDES]; // 32
-int *FAT; // Will be populated with the FAT data
-struct dir_entry *DIR; // Will be populated with
+int* FAT; // Will be populated with the FAT data
+struct dir_entry* DIR; // Will be populated with
 //the directory data
 
 int make_fs(char *disk_name) {
@@ -47,20 +49,46 @@ int make_fs(char *disk_name) {
   }
 
   fs = calloc(1, sizeof(struct super_block));
+  FAT = calloc(4096, sizeof(int));
+  DIR = calloc(64, sizeof(struct dir_entry));
 
   fs->fat_idx = 1;
   fs->fat_len = 0;
   fs->dir_idx = 2;
-  fs->dir_len = 0;
+  fs->dir_len = 1;
   fs->data_idx = 3;
 
-  block_write(1, "hello world");
+  int i;
+  for (i = 0; i < 64; i++) {
+    DIR[i].used = false;
+  }
+
+  // reserved blocks
+  FAT[0] = -3;
+  FAT[1] = -3;
+  FAT[2] = -3;
+
+  for (i = 3; i < 4096; i++) {
+    FAT[i] = -1; // free
+  }
 
   if (block_write(0, (char*) fs) < 0) {
     return -1;
   }
 
-  printf("Wrote: %s\n", (char*) fs);
+  printf("Wrote super block\n");
+
+  if (block_write(1, (char*) FAT) < 0) {
+    return -1;
+  }
+
+  printf("Wrote FAT\n");
+
+  if (block_write(2, (char*) DIR) < 0) {
+    return -1;
+  }
+
+  printf("Wrote DIR\n");
 
   if (close_disk(disk_name) < 0) {
     return -1;
@@ -76,10 +104,26 @@ int mount_fs(char *disk_name) {
   }
 
   fs = calloc(1, sizeof(struct super_block));
+  FAT = calloc(4096, sizeof(int));
+  DIR = calloc(64, sizeof(struct dir_entry));
 
   if (block_read(0, (char*) fs) < 0) {
     return -1;
   }
+
+  printf("Read superblock\n");
+
+  if (block_read(0, (char*) FAT) < 0) {
+    return -1;
+  }
+
+  printf("Read FAT\n");
+
+  if (block_read(0, (char*) DIR) < 0) {
+    return -1;
+  }
+
+  printf("Read DIR\n");
 
   return 0;
 }
@@ -102,6 +146,12 @@ int fs_close(int fildes) {
 }
 
 int fs_create(char *name) {
+  if (strlen(name) > 15) {
+    printf("Error: File name too long\n");
+    return -1;
+  }
+
+
   return 0;
 }
 

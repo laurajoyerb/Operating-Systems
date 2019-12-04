@@ -5,7 +5,7 @@
 
 int main() {
   char* disk_name = "mydisk";
-  // char* name = "name";
+  char* name = "name";
   // int fildes = 10;
   // void* buf = NULL;
   // size_t nbyte = 10;
@@ -42,7 +42,7 @@ int main() {
   //
   // fs_open(name);
   // fs_close(fildes);
-  // fs_create(name);
+  fs_create(name);
   // fs_delete(name);
   // fs_read(fildes, buf, nbyte);
   // fs_write(fildes, buf, nbyte);
