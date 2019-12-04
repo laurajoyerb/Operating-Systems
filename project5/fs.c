@@ -60,6 +60,8 @@ int make_fs(char *disk_name) {
     return -1;
   }
 
+  printf("Wrote: %s\n", (char*) fs);
+
   if (close_disk(disk_name) < 0) {
     return -1;
   }
@@ -70,6 +72,12 @@ int make_fs(char *disk_name) {
 int mount_fs(char *disk_name) {
 
   if (open_disk(disk_name) < 0) {
+    return -1;
+  }
+
+  fs = calloc(1, sizeof(struct super_block));
+
+  if (block_read(0, (char*) fs) < 0) {
     return -1;
   }
 
