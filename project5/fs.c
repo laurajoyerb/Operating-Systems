@@ -31,7 +31,7 @@ struct file_descriptor {
   int offset; // position of fd within f
 };
 
-struct super_block fs;
+struct super_block* fs;
 struct file_descriptor fildes[MAX_FILDES]; // 32
 int *FAT; // Will be populated with the FAT data
 struct dir_entry *DIR; // Will be populated with
@@ -46,16 +46,21 @@ int make_fs(char *disk_name) {
     return -1;
   }
 
-  fs.fat_idx = 10;
-  fs.fat_len = 0;
-  fs.dir_idx = 20;
-  fs.dir_len = 0;
-  fs.data_idx = 30;
+  fs = calloc(1, sizeof(struct super_block));
+
+  fs->fat_idx = 1;
+  fs->fat_len = 0;
+  fs->dir_idx = 2;
+  fs->dir_len = 0;
+  fs->data_idx = 3;
 
   block_write(1, "hello world");
 
-  if (block_write(0, (char*) (&fs)) < 0) {
-    printf("could not write\n");
+  if (block_write(0, (char*) fs) < 0) {
+    return -1;
+  }
+
+  if (close_disk(disk_name) < 0) {
     return -1;
   }
 
@@ -63,10 +68,20 @@ int make_fs(char *disk_name) {
 }
 
 int mount_fs(char *disk_name) {
+
+  if (open_disk(disk_name) < 0) {
+    return -1;
+  }
+
   return 0;
 }
 
 int umount_fs(char *disk_name) {
+
+  if (close_disk(disk_name) < 0) {
+    return -1;
+  }
+
   return 0;
 }
 

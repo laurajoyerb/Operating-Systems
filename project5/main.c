@@ -32,8 +32,10 @@ int main() {
   // printf("\tClose: %d\n", close);
 
   make_fs(disk_name);
+  open_disk(disk_name);
   block_read(1, read_buf);
   printf("Block read gave us: %s\n", read_buf);
+  close_disk(disk_name);
   // mount_fs(disk_name);
   // umount_fs(disk_name);
   //
