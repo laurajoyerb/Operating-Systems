@@ -5,7 +5,7 @@
 
 int main() {
   char* disk_name = "mydisk";
-  char* name = "name";
+  char* name = "newfilename";
   // int fildes = 10;
   // void* buf = NULL;
   // size_t nbyte = 10;
@@ -17,7 +17,7 @@ int main() {
   // char read_buf[20] = {0};
 
   // printf("Return values:\n");
-  // int make = make_disk(disk_name);
+  // make_disk(disk_name);
   // printf("\tMake: %d\n", make);
   // int open = open_disk(disk_name);
   // printf("\tOpen: %d\n", open);
@@ -31,18 +31,19 @@ int main() {
   // int close = close_disk(disk_name);
   // printf("\tClose: %d\n", close);
 
-  make_fs(disk_name);
+  // make_fs(disk_name);
   mount_fs(disk_name);
   // open_disk(disk_name);
   // block_read(1, read_buf);
   // printf("Block read gave us: %s\n", read_buf);
   // close_disk(disk_name);
   // mount_fs(disk_name);
-  // umount_fs(disk_name);
+  fs_create(name);
+  umount_fs(disk_name);
   //
   // fs_open(name);
   // fs_close(fildes);
-  fs_create(name);
+  // fs_create(name);
   // fs_delete(name);
   // fs_read(fildes, buf, nbyte);
   // fs_write(fildes, buf, nbyte);

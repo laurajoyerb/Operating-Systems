@@ -5,7 +5,7 @@
 #include "disk.h"
 
 #define MAX_F_NAME 15
-#define MAX_FILDES 64
+#define MAX_FILDES 32
 #define SUPER_BLOCK_NUM 0
 
 struct super_block {
@@ -17,7 +17,7 @@ struct super_block {
 };
 
 struct dir_entry {
-  int used; // Is this file-”slot” in use
+  bool used; // Is this file-”slot” in use
   char name [MAX_F_NAME + 1]; // DOH!
   int size; // file size
   int head; // first data block of file
@@ -27,7 +27,7 @@ struct dir_entry {
 };
 
 struct file_descriptor {
-  int used; // fd in use
+  bool used; // fd in use
   int file; // the first block of the file
   // (f) to which fd refers too
   int offset; // position of fd within f
@@ -35,7 +35,7 @@ struct file_descriptor {
 
 struct super_block* fs;
 struct file_descriptor fildes[MAX_FILDES]; // 32
-int* FAT; // Will be populated with the FAT data
+short int* FAT; // Will be populated with the FAT data
 struct dir_entry* DIR; // Will be populated with
 //the directory data
 
@@ -49,27 +49,24 @@ int make_fs(char *disk_name) {
   }
 
   fs = calloc(1, sizeof(struct super_block));
-  FAT = calloc(4096, sizeof(int));
+  FAT = calloc(4096, sizeof(short int));
   DIR = calloc(64, sizeof(struct dir_entry));
 
   fs->fat_idx = 1;
-  fs->fat_len = 0;
-  fs->dir_idx = 2;
+  fs->fat_len = 2;
+  fs->dir_idx = 3;
   fs->dir_len = 1;
-  fs->data_idx = 3;
-
-  int i;
-  for (i = 0; i < 64; i++) {
-    DIR[i].used = false;
-  }
+  fs->data_idx = 4;
 
   // reserved blocks
-  FAT[0] = -3;
-  FAT[1] = -3;
-  FAT[2] = -3;
+  FAT[0] = -3; // super block
+  FAT[1] = -3; // FAT
+  FAT[2] = -3; // FAT
+  FAT[3] = -3; // DIR
 
-  for (i = 3; i < 4096; i++) {
-    FAT[i] = -1; // free
+  int i;
+  for (i = 4; i < 4096; i++) {
+    FAT[i] = -2; // free
   }
 
   if (block_write(0, (char*) fs) < 0) {
@@ -78,13 +75,15 @@ int make_fs(char *disk_name) {
 
   printf("Wrote super block\n");
 
-  if (block_write(1, (char*) FAT) < 0) {
-    return -1;
+  for (i = 0; i < 2; i++) {
+    if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
+      return -1;
+    }
   }
 
   printf("Wrote FAT\n");
 
-  if (block_write(2, (char*) DIR) < 0) {
+  if (block_write(fs->dir_idx, (char*) DIR) < 0) {
     return -1;
   }
 
@@ -113,13 +112,16 @@ int mount_fs(char *disk_name) {
 
   printf("Read superblock\n");
 
-  if (block_read(0, (char*) FAT) < 0) {
-    return -1;
+  int i;
+  for (i = 0; i < 2; i++) {
+    if (block_read(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
+      return -1;
+    }
   }
 
   printf("Read FAT\n");
 
-  if (block_read(0, (char*) DIR) < 0) {
+  if (block_read(fs->dir_idx, (char*) DIR) < 0) {
     return -1;
   }
 
@@ -129,6 +131,27 @@ int mount_fs(char *disk_name) {
 }
 
 int umount_fs(char *disk_name) {
+
+  if (block_write(0, (char*) fs) < 0) {
+    return -1;
+  }
+
+  printf("Wrote super block to disk\n");
+
+  int i;
+  for (i = 0; i < 2; i++) {
+    if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
+      return -1;
+    }
+  }
+
+  printf("Wrote FAT to disk\n");
+
+  if (block_write(fs->dir_idx, (char*) DIR) < 0) {
+    return -1;
+  }
+
+  printf("Wrote DIR to disk\n");
 
   if (close_disk(disk_name) < 0) {
     return -1;
@@ -151,6 +174,55 @@ int fs_create(char *name) {
     return -1;
   }
 
+  int i;
+  int files = 0;
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].used == true) {
+      files++;
+      if (strcmp(DIR[i].name, name) == 0) {
+        printf("Error: A file already exists with that name\n");
+        return -1;
+      }
+    }
+  }
+
+  if (files >= 64) {
+    printf("Error: Too many files\n");
+    return 0;
+  }
+
+  // finds next available block in FAT and marks with eof
+  int first_block = -1;
+  for (i = 0; i < 4096; i++) {
+    if (FAT[i] == -2) { // checks if free
+      first_block = i;
+      FAT[i] = -1; // eof
+      break;
+    }
+  }
+
+  if (first_block == -1) {
+    printf("Error: No more memory available\n");
+    return -1;
+  }
+
+  // adds to next available DIR entry
+  for (i = 0; i < 64; i++) {
+    // printf("inside of for loop\n");
+    if (DIR[i].used == false) {
+      DIR[i].used = true;
+      memcpy(DIR[i].name, name, strlen(name));
+      DIR[i].size = 1;
+      DIR[i].head = first_block;
+      DIR[i].ref_cnt = 0;
+      printf("Created a file:\n");
+      printf("\tName: %s\n", DIR[i].name);
+      printf("\tSize: %d blocks\n", DIR[i].size);
+      printf("\tHead: Block %d\n", DIR[i].head);
+      printf("\tRef Count: %d\n", DIR[i].ref_cnt);
+      break;
+    }
+  }
 
   return 0;
 }
