@@ -171,6 +171,7 @@ int fs_open(char *name) {
           fildes[j].used = true;
           fildes[j].file = DIR[i].head;
           fildes[j].offset = 0;
+          DIR[i].ref_cnt++;
           return j;
         }
       }
@@ -191,10 +192,18 @@ int fs_close(int desc) {
     return -1;
   }
 
-  fildes[desc].used = false;
-  fildes[desc].file = -1;
-  fildes[desc].offset = 0;
-  return 0;
+  int i;
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].head == fildes[desc].file) {
+      DIR[i].ref_cnt--;
+      fildes[desc].used = false;
+      fildes[desc].file = -1;
+      fildes[desc].offset = 0;
+      return 0;
+    }
+  }
+
+  return -1;
 }
 
 int fs_create(char *name) {
@@ -257,7 +266,37 @@ int fs_create(char *name) {
 }
 
 int fs_delete(char *name) {
-  return 0;
+  int i;
+  for (i = 0; i < 64; i++) {
+    if (strcmp(DIR[i].name, name) == 0) {
+      // file is found
+      if (DIR[i].ref_cnt > 0) {
+        return -1;
+      }
+
+      int block = DIR[i].head;
+      int next_block;
+      while (FAT[block] != -2) {
+        next_block = FAT[block];
+        FAT[block] = -2;
+        if (next_block == -1 || next_block == -3) {
+          break;
+        }
+        block = next_block;
+      }
+
+      DIR[i].used = false;
+      memcpy(DIR[i].name, " ", 2);
+      DIR[i].size = 0;
+      DIR[i].head = 0;
+
+      return 0;
+
+    }
+  }
+
+  printf("Error: Could not find file to delete\n");
+  return -1;
 }
 
 int fs_read(int fildes, void *buf, size_t nbyte) {
