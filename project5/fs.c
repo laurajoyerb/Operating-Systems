@@ -56,7 +56,7 @@ int make_fs(char *disk_name) {
   fs->fat_len = 2;
   fs->dir_idx = 3;
   fs->dir_len = 1;
-  fs->data_idx = 4;
+  fs->data_idx = 2048;
 
   // reserved blocks
   FAT[0] = -3; // super block
@@ -161,7 +161,26 @@ int umount_fs(char *disk_name) {
 }
 
 int fs_open(char *name) {
-  return 0;
+  int i, j;
+  for (i = 0; i < 64; i++) {
+    if (strcmp(DIR[i].name, name) == 0) {
+      // file is found
+      for (j = 0; j < MAX_FILDES; j++) {
+        if (fildes[j].used == false) {
+          // free file descriptor
+          fildes[i].used = true;
+          fildes[i].file = DIR[i].head;
+          fildes[i].offset = 0;
+          return i;
+        }
+      }
+      printf("Error: No available file descriptors\n");
+      return -1;
+    }
+  }
+
+  printf("Error: File not found\n");
+  return -1;
 }
 
 int fs_close(int fildes) {

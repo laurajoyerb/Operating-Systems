@@ -5,7 +5,9 @@
 
 int main() {
   char* disk_name = "mydisk";
-  char* name = "newfilename";
+  char* name1 = "name";
+  char* name2 = "newfilename";
+  char* name3 = "openthisfile";
   // int fildes = 10;
   // void* buf = NULL;
   // size_t nbyte = 10;
@@ -38,10 +40,15 @@ int main() {
   // printf("Block read gave us: %s\n", read_buf);
   // close_disk(disk_name);
   // mount_fs(disk_name);
-  fs_create(name);
+  // fs_create(name);
+  int foo1 = fs_open(name1);
+  printf("File descriptor is: %d for file %s\n", foo1, name1);
+  int foo2 = fs_open(name2);
+  printf("File descriptor is: %d for file %s\n", foo2, name2);
+  int foo3 = fs_open(name3);
+  printf("File descriptor is: %d for file %s\n", foo3, name3);
   umount_fs(disk_name);
   //
-  // fs_open(name);
   // fs_close(fildes);
   // fs_create(name);
   // fs_delete(name);
