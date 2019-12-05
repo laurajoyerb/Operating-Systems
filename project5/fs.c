@@ -183,7 +183,17 @@ int fs_open(char *name) {
   return -1;
 }
 
-int fs_close(int fildes) {
+int fs_close(int desc) {
+  if ((desc >= MAX_FILDES) || (desc < 0)) {
+    return -1;
+  }
+  if (fildes[desc].used == false) {
+    return -1;
+  }
+
+  fildes[desc].used = false;
+  fildes[desc].file = -1;
+  fildes[desc].offset = 0;
   return 0;
 }
 

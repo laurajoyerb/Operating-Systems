@@ -23,6 +23,15 @@ int main() {
   printf("File descriptor is: %d for file %s\n", foo2, name1);
   int foo3 = fs_open(name1);
   printf("File descriptor is: %d for file %s\n", foo3, name1);
+
+  fs_close(foo1);
+  printf("File descriptor %d has been closed\n", foo1);
+  fs_close(foo2);
+  printf("File descriptor %d has been closed\n", foo2);
+  fs_close(foo3);
+  printf("File descriptor %d has been closed\n", foo3);
+
+
   umount_fs(disk_name);
   //
   // fs_close(fildes);
