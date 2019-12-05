@@ -6,47 +6,23 @@
 int main() {
   char* disk_name = "mydisk";
   char* name1 = "name";
-  char* name2 = "newfilename";
-  char* name3 = "openthisfile";
-  // int fildes = 10;
+  // char* name2 = "newfilename";
+  // char* name3 = "openthisfile";
   // void* buf = NULL;
   // size_t nbyte = 10;
   // char*** files = NULL;
   // off_t offset = 10;
   // off_t length = 10;
 
-  // char* write_buf = "writing";
-  // char read_buf[20] = {0};
-
-  // printf("Return values:\n");
-  // make_disk(disk_name);
-  // printf("\tMake: %d\n", make);
-  // int open = open_disk(disk_name);
-  // printf("\tOpen: %d\n", open);
-  // int write = block_write(1, "heyy");
-  // printf("\tWrite: %d\n", write);
-  // int read = block_read(1, read_buf);
-  // printf("\tRead: %d\n", read);
-  //
-  // printf("Block read gave us: %c%c%c\n", read_buf[0], read_buf[1], read_buf[2]);
-  //
-  // int close = close_disk(disk_name);
-  // printf("\tClose: %d\n", close);
-
   // make_fs(disk_name);
   mount_fs(disk_name);
-  // open_disk(disk_name);
-  // block_read(1, read_buf);
-  // printf("Block read gave us: %s\n", read_buf);
-  // close_disk(disk_name);
-  // mount_fs(disk_name);
   // fs_create(name);
   int foo1 = fs_open(name1);
   printf("File descriptor is: %d for file %s\n", foo1, name1);
-  int foo2 = fs_open(name2);
-  printf("File descriptor is: %d for file %s\n", foo2, name2);
-  int foo3 = fs_open(name3);
-  printf("File descriptor is: %d for file %s\n", foo3, name3);
+  int foo2 = fs_open(name1);
+  printf("File descriptor is: %d for file %s\n", foo2, name1);
+  int foo3 = fs_open(name1);
+  printf("File descriptor is: %d for file %s\n", foo3, name1);
   umount_fs(disk_name);
   //
   // fs_close(fildes);

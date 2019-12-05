@@ -168,10 +168,10 @@ int fs_open(char *name) {
       for (j = 0; j < MAX_FILDES; j++) {
         if (fildes[j].used == false) {
           // free file descriptor
-          fildes[i].used = true;
-          fildes[i].file = DIR[i].head;
-          fildes[i].offset = 0;
-          return i;
+          fildes[j].used = true;
+          fildes[j].file = DIR[i].head;
+          fildes[j].offset = 0;
+          return j;
         }
       }
       printf("Error: No available file descriptors\n");
