@@ -299,7 +299,20 @@ int fs_delete(char *name) {
   return -1;
 }
 
-int fs_read(int fildes, void *buf, size_t nbyte) {
+int fs_read(int desc, void *buf, size_t nbyte) {
+  if (fildes[desc].used == false) {
+    printf("Error: File not open\n");
+    return -1;
+  }
+
+  // int first = fildes[desc].file;
+
+
+
+  // while (block != -1) { // -1 is eof
+  //
+  // }
+
   return 0;
 }
 
@@ -307,11 +320,42 @@ int fs_write(int fildes, void *buf, size_t nbyte) {
   return 0;
 }
 
-int fs_get_filesize(int fildes) {
-  return 0;
+int fs_get_filesize(int desc) {
+  if (fildes[desc].used == false) {
+    printf("Error: File not open\n");
+    return -1;
+  }
+
+  int i;
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].head == fildes[desc].file) {
+      return DIR[i].size;
+    }
+  }
+
+  printf("Error: File could not be found\n");
+  return -1;
 }
 
 int fs_listfiles(char ***files) {
+  // char** names = NULL; // = calloc(64, sizeof(char) * 15);
+  // *names = malloc(15);
+  // names = malloc(64 * sizeof(char*));
+  // char* str;
+  // str = malloc(15);
+  int i = 0;
+  //
+  // for (i = 0; i < 64; i++) {
+  //   names[i] = malloc(8);
+  // }
+
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].used == true) {
+      printf("\t%s\n", DIR[i].name);
+    }
+  }
+  // names[j] = NULL;
+  // files = &names;
   return 0;
 }
 
