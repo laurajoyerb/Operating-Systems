@@ -344,16 +344,22 @@ int fs_listfiles(char ***files) {
   // char* str;
   // str = malloc(15);
   int i = 0;
-  //
-  // for (i = 0; i < 64; i++) {
-  //   names[i] = malloc(8);
+  // (*files) = malloc(sizeof(char*) * 3); // size of char* x num of files
+  // //
+  // for (i = 0; i < 3; i++) {
+  //   // names[i] = malloc(8);
+  //   (*files)[i] = malloc(sizeof(char) * (16));//malloc size of char times file name size plus one
   // }
 
-  for (i = 0; i < 64; i++) {
+  for (i = 0; i < 3; i++) {
     if (DIR[i].used == true) {
       printf("\t%s\n", DIR[i].name);
+      // strcpy((*files)[j], DIR[i].name);
+      // j++;
     }
   }
+
+  // (*files)[j] = NULL;
   // names[j] = NULL;
   // files = &names;
   return 0;
