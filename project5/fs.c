@@ -312,8 +312,44 @@ int fs_read(int desc, void *buf, size_t nbyte) {
     printf("Error: File not open\n");
     return -1;
   }
+  int file_off = fildes[desc].offset;
+  int file_block = fildes[desc].file; // starts at head
 
-  return 0;
+  while (file_off > 4096) { // moves offset up blocks if need be
+    file_off -= 4096; // gets offset for that block
+    file_block = FAT[file_block]; // grabs next block
+    if (file_block == -1) {
+      // has reached end of file, eof is found before offset is less than block size
+      return -1;
+    }
+  }
+
+  char block_contents[4096];
+  memset(block_contents, 0, 4096);
+  if (block_read(file_block, block_contents) < 0) {
+    printf("Error: Could not read from block %d\n", file_block);
+    return -1;
+  }
+
+  int bytes_read = 0;
+  char read_contents[nbyte];
+  memset(read_contents, 0, nbyte);
+
+  int i;
+  for (i = file_off; i < nbyte; i++) {
+    // reaches end of file
+    if (i >= 4096) {
+      memcpy(buf, read_contents, nbyte);
+      return bytes_read;
+    }
+
+    read_contents[bytes_read] = block_contents[i];
+    bytes_read++;
+    fildes[desc].offset++;
+  }
+
+  memcpy(buf, read_contents, nbyte);
+  return bytes_read;
 }
 
 int fs_write(int fildes, void *buf, size_t nbyte) {
