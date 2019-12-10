@@ -1,5 +1,6 @@
 #include<stdio.h>
 #include<stdlib.h>
+#include <string.h>
 #include "fs.h"
 #include "disk.h"
 
@@ -8,8 +9,10 @@ int main() {
   char* name1 = "name1";
   // char* name2 = "newfilename1";
   // char* name3 = "openfile1";
-  void* buf = malloc(sizeof(void*) * 4096);
   size_t nbyte = 10;
+  void* buf = malloc(sizeof(void*) * 4096);
+  void* write_buf = malloc(sizeof(void*) * 4096);
+  memcpy(write_buf, "hey", nbyte);
   // char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
   // off_t offset = 10;
   // off_t length = 10;
@@ -33,6 +36,7 @@ int main() {
   // while(files[num++] != NULL) {
   // };
   // printf("Num of files is: %d\n", num - 1);
+  fs_write(foo1, buf, nbyte);
   fs_read(foo1, buf, nbyte);
 
   umount_fs(disk_name);
@@ -41,7 +45,6 @@ int main() {
   // fs_create(name);
   // fs_delete(name);
   // fs_read(fildes, buf, nbyte);
-  // fs_write(fildes, buf, nbyte);
   // fs_get_filesize(fildes);
   // printf("File 1: %s\n", *files[0]);
   // fs_lseek(fildes, offset);

@@ -352,8 +352,50 @@ int fs_read(int desc, void *buf, size_t nbyte) {
   return bytes_read;
 }
 
-int fs_write(int fildes, void *buf, size_t nbyte) {
-  return 0;
+int fs_write(int desc, void *buf, size_t nbyte) {
+  if (fildes[desc].used == false) {
+    printf("Error: File not open\n");
+    return -1;
+  }
+  int file_off = fildes[desc].offset;
+  int file_block = fildes[desc].file; // starts at head
+
+  while (file_off > 4096) { // moves offset up blocks if need be
+    file_off -= 4096; // gets offset for that block
+    file_block = FAT[file_block]; // grabs next block
+    if (file_block == -1) {
+      // has reached end of file, eof is found before offset is less than block size
+      return -1;
+    }
+  }
+
+  char block_contents[4096];
+  if (block_read(file_block, block_contents) < 0) {
+    printf("Error: Could not read from block %d\n", file_block);
+    return -1;
+  }
+
+  int bytes_written = 0;
+  char write_contents[nbyte];
+  int i;
+  for (i = 0; i < nbyte; i++) {
+    memcpy(write_contents, buf, nbyte);
+  }
+
+  for (i = file_off; i < nbyte; i++) {
+    // reaches end of file
+    if (i >= 4096) {
+      block_write(file_block, block_contents);
+      return bytes_written;
+    }
+
+    write_contents[bytes_written] = block_contents[i];
+    bytes_written++;
+    fildes[desc].offset++;
+  }
+
+  memcpy(buf, write_contents, nbyte);
+  return bytes_written;
 }
 
 int fs_get_filesize(int desc) {
