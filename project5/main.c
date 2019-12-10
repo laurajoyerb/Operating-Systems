@@ -19,13 +19,13 @@ int main() {
   fs_create(name1);
   fs_create(name2);
   fs_create(name3);
-  int foo1 = fs_open(name1);
-  int foo2 = fs_open(name2);
-  int foo3 = fs_open(name3);
-
-  fs_close(foo1);
-  fs_close(foo2);
-  fs_close(foo3);
+  // int foo1 = fs_open(name1);
+  // int foo2 = fs_open(name2);
+  // int foo3 = fs_open(name3);
+  //
+  // fs_close(foo1);
+  // fs_close(foo2);
+  // fs_close(foo3);
 
   printf("Files are:\n");
   fs_listfiles(&files);
@@ -34,7 +34,7 @@ int main() {
   // };
   // printf("Num of files is: %d\n", num - 1);
 
-  // umount_fs(disk_name);
+  umount_fs(disk_name);
   //
   // fs_close(fildes);
   // fs_create(name);

@@ -39,6 +39,8 @@ short int* FAT; // Will be populated with the FAT data
 struct dir_entry* DIR; // Will be populated with
 //the directory data
 
+bool mounted = false;
+
 int make_fs(char *disk_name) {
   if (make_disk(disk_name) < 0) {
     return -1;
@@ -47,6 +49,8 @@ int make_fs(char *disk_name) {
   if (open_disk(disk_name) < 0) {
     return -1;
   }
+
+  mounted = true;
 
   fs = calloc(1, sizeof(struct super_block));
   FAT = calloc(4096, sizeof(short int));
@@ -101,6 +105,8 @@ int mount_fs(char *disk_name) {
   if (open_disk(disk_name) < 0) {
     return -1;
   }
+
+  mounted = true;
 
   fs = calloc(1, sizeof(struct super_block));
   FAT = calloc(4096, sizeof(int));
@@ -258,6 +264,7 @@ int fs_create(char *name) {
       printf("\tSize: %d blocks\n", DIR[i].size);
       printf("\tHead: Block %d\n", DIR[i].head);
       printf("\tRef Count: %d\n", DIR[i].ref_cnt);
+      fs->dir_len++;
       break;
     }
   }
@@ -289,6 +296,7 @@ int fs_delete(char *name) {
       memcpy(DIR[i].name, " ", 2);
       DIR[i].size = 0;
       DIR[i].head = 0;
+      fs->dir_len--;
 
       return 0;
 
@@ -304,14 +312,6 @@ int fs_read(int desc, void *buf, size_t nbyte) {
     printf("Error: File not open\n");
     return -1;
   }
-
-  // int first = fildes[desc].file;
-
-
-
-  // while (block != -1) { // -1 is eof
-  //
-  // }
 
   return 0;
 }
@@ -351,7 +351,7 @@ int fs_listfiles(char ***files) {
   //   (*files)[i] = malloc(sizeof(char) * (16));//malloc size of char times file name size plus one
   // }
 
-  for (i = 0; i < 3; i++) {
+  for (i = 0; i < 64; i++) {
     if (DIR[i].used == true) {
       printf("\t%s\n", DIR[i].name);
       // strcpy((*files)[j], DIR[i].name);
