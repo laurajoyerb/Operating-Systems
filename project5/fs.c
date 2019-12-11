@@ -595,6 +595,7 @@ int fs_truncate(int desc, off_t length) {
   for (i = 0; i < 64; i++) {
     if (DIR[i].head == fildes[desc].file) {
       desc_dir = i;
+      break;
     }
   }
 
@@ -603,15 +604,15 @@ int fs_truncate(int desc, off_t length) {
     return -1;
   }
 
-  if (DIR[i].size < length) {
+  if (DIR[desc_dir].size < length) {
     return -1;
   }
 
-  if (DIR[i].size == length) {
+  if (DIR[desc_dir].size == length) {
     return 0;
   }
 
-  DIR[i].size = length;
+  DIR[desc_dir].size = length;
   if (fildes[desc].offset > length) {
     fildes[desc].offset = length;
   }
@@ -619,7 +620,7 @@ int fs_truncate(int desc, off_t length) {
   int trunc_block = length / MAX_BLOCK_SIZE;
   trunc_block++;
 
-  int curr_block = FAT[DIR[i].head];
+  int curr_block = DIR[desc_dir].head;
 
   for (i = 0; i < trunc_block; i++) {
     curr_block = FAT[curr_block];
@@ -628,7 +629,7 @@ int fs_truncate(int desc, off_t length) {
   int erase_block = FAT[curr_block];
   FAT[curr_block] = -1; // eof
 
-  while (erase_block != -1) {
+  while (erase_block > 0) {
     erase_block = FAT[erase_block];
     FAT[erase_block] = -2; // frees block
   }
