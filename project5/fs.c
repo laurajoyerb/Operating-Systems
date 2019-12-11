@@ -237,7 +237,7 @@ int fs_create(char *name) {
 
   // finds next available block in FAT and marks with eof
   int first_block = -1;
-  for (i = 0; i < 4096; i++) {
+  for (i = fs->data_idx; i < 4096; i++) {
     if (FAT[i] == -2) { // checks if free
       first_block = i;
       FAT[i] = -1; // eof
@@ -256,7 +256,7 @@ int fs_create(char *name) {
     if (DIR[i].used == false) {
       DIR[i].used = true;
       memcpy(DIR[i].name, name, strlen(name));
-      DIR[i].size = 1;
+      DIR[i].size = 0;
       DIR[i].head = first_block;
       DIR[i].ref_cnt = 0;
       printf("Created a file:\n");
@@ -485,6 +485,10 @@ int fs_truncate(int desc, off_t length) {
   }
 
   DIR[i].size = length;
+  if (fildes[desc].offset > length) {
+    fildes[desc].offset = length;
+  }
+
   int trunc_block = length / 4096;
   trunc_block++;
 
@@ -495,6 +499,5 @@ int fs_truncate(int desc, off_t length) {
   }
 
   FAT[curr_block] = -1; // eof
-
   return 0;
 }
