@@ -13,7 +13,7 @@ struct super_block {
   int fat_idx; // first block of FAT
   int fat_len; // length of FAT in blocks
   int dir_idx; // first block of directory
-  int dir_len; // length of directory in blocks
+  int dir_len; // length of directory in files
   int data_idx; // first block of file-data
 };
 
@@ -60,7 +60,7 @@ int make_fs(char *disk_name) {
   fs->fat_idx = 1;
   fs->fat_len = 2;
   fs->dir_idx = 3;
-  fs->dir_len = 1;
+  fs->dir_len = 0;
   fs->data_idx = 2048;
 
   // reserved blocks
@@ -534,30 +534,30 @@ int fs_get_filesize(int desc) {
 }
 
 int fs_listfiles(char ***files) {
-  // char** names = NULL; // = calloc(64, sizeof(char) * 15);
-  // *names = malloc(15);
-  // names = malloc(64 * sizeof(char*));
-  // char* str;
-  // str = malloc(15);
-  int i = 0;
-  // (*files) = malloc(sizeof(char*) * 3); // size of char* x num of files
-  // //
-  // for (i = 0; i < 3; i++) {
-  //   // names[i] = malloc(8);
-  //   (*files)[i] = malloc(sizeof(char) * (16));//malloc size of char times file name size plus one
+  // int i, j, num_files = 0;
+
+  // for (i = 0; i < fs->dir_len; i++) {
+  //   if (DIR[i].used == true) {
+  //     num_files++;
+  //   }
   // }
-
-  for (i = 0; i < 64; i++) {
-    if (DIR[i].used == true) {
-      printf("\t%s\n", DIR[i].name);
-      // strcpy((*files)[j], DIR[i].name);
-      // j++;
-    }
-  }
-
-  // (*files)[j] = NULL;
-  // names[j] = NULL;
-  // files = &names;
+  //
+  // *files = malloc(sizeof(char*) * (num_files + 1));
+  //
+  // for (i = 0; i < num_files; i++) {
+  //   (*files)[i] = malloc(sizeof(char) * (MAX_F_NAME + 1));
+  // }
+  //
+  // // char* list[num_files + 1];
+  // // *files = list;
+  //
+  // for (i = 0; i < num_files; i++) {
+  //   if (DIR[i].used == true) {
+  //     strcpy((*files)[j], DIR[i].name); //(*files)[j] = DIR[i].name;
+  //     j++;
+  //   }
+  // }
+  // (*files)[num_files] = NULL;
   return 0;
 }
 

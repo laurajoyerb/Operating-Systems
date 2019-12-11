@@ -13,7 +13,7 @@ int main() {
   void* buf[10];
   char write_buf[10] = "123456789"; //malloc(sizeof(void*) * 4096);
   // memcpy(write_buf, "hey", nbyte);
-  // char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
+  char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
   off_t offset = 0;
 
   // make_fs(disk_name);
@@ -41,8 +41,18 @@ int main() {
 
   // fs_truncate(foo1, length);
 
-  // printf("Files are:\n");
-  // fs_listfiles(&files);
+  printf("Files are:\n");
+  fs_listfiles(&files);
+
+  // printf("%s %s %s\n", files[0], files[1], files[2]);
+  // int i;
+  // for (i = 0; i < 3; i++) {
+  //   if (files[i] != NULL) {
+  //     printf("%s\n", files[i]);
+  //   } else {
+  //     break;
+  //   }
+  // }
 
   umount_fs(disk_name);
   //
