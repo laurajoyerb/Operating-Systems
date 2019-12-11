@@ -8,6 +8,8 @@
 #define MAX_F_NAME 15
 #define MAX_FILDES 32
 #define SUPER_BLOCK_NUM 0
+#define MAX_BLOCK_SIZE 4096
+#define MAX_FILE_SIZE (16 * 1024 * 1024)
 
 struct super_block {
   int fat_idx; // first block of FAT
@@ -61,7 +63,7 @@ int make_fs(char *disk_name) {
   fs->fat_len = 2;
   fs->dir_idx = 3;
   fs->dir_len = 0;
-  fs->data_idx = 2048;
+  fs->data_idx = 4;
 
   // reserved blocks
   FAT[0] = -3; // super block
@@ -78,25 +80,21 @@ int make_fs(char *disk_name) {
     return -1;
   }
 
-  printf("Wrote super block\n");
-
   for (i = 0; i < 2; i++) {
     if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
       return -1;
     }
   }
 
-  printf("Wrote FAT\n");
-
   if (block_write(fs->dir_idx, (char*) DIR) < 0) {
     return -1;
   }
 
-  printf("Wrote DIR\n");
-
   if (close_disk(disk_name) < 0) {
     return -1;
   }
+
+  printf("File system made\n");
 
   return 0;
 }
@@ -117,8 +115,6 @@ int mount_fs(char *disk_name) {
     return -1;
   }
 
-  printf("Read superblock\n");
-
   int i;
   for (i = 0; i < 2; i++) {
     if (block_read(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
@@ -126,13 +122,11 @@ int mount_fs(char *disk_name) {
     }
   }
 
-  printf("Read FAT\n");
-
   if (block_read(fs->dir_idx, (char*) DIR) < 0) {
     return -1;
   }
 
-  printf("Read DIR\n");
+  printf("File system mounted\n");
 
   return 0;
 }
@@ -143,8 +137,6 @@ int umount_fs(char *disk_name) {
     return -1;
   }
 
-  printf("Wrote super block to disk\n");
-
   int i;
   for (i = 0; i < 2; i++) {
     if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
@@ -152,17 +144,15 @@ int umount_fs(char *disk_name) {
     }
   }
 
-  printf("Wrote FAT to disk\n");
-
   if (block_write(fs->dir_idx, (char*) DIR) < 0) {
     return -1;
   }
 
-  printf("Wrote DIR to disk\n");
-
   if (close_disk(disk_name) < 0) {
     return -1;
   }
+
+  printf("File system written to disk\n");
 
   return 0;
 }
@@ -320,8 +310,8 @@ int fs_read(int desc, void *buf, size_t nbyte) {
     return 0;
   }
 
-  while (file_off >= 4096) { // moves offset up blocks if need be
-    file_off -= 4096; // gets offset for that block
+  while (file_off >= MAX_BLOCK_SIZE) { // moves offset up blocks if need be
+    file_off -= MAX_BLOCK_SIZE; // gets offset for that block
     file_block = FAT[file_block]; // grabs next block
     if (file_block == -1) {
       // has reached end of file, eof is found before offset is less than block size
@@ -329,8 +319,8 @@ int fs_read(int desc, void *buf, size_t nbyte) {
     }
   }
 
-  char block_contents[4096];
-  memset(block_contents, -1, 4096);
+  char block_contents[MAX_BLOCK_SIZE];
+  memset(block_contents, -1, MAX_BLOCK_SIZE);
   if (block_read(file_block, block_contents) < 0) {
     printf("Error: Could not read from block %d\n", file_block);
     return -1;
@@ -341,7 +331,7 @@ int fs_read(int desc, void *buf, size_t nbyte) {
   memset(read_contents, 0, nbyte);
 
   int i;
-  for (i = file_off; i < 4096; i++) {
+  for (i = file_off; i < MAX_BLOCK_SIZE; i++) {
     // reaches end of file
     if (block_contents[i] == -1) {
       memcpy(buf, read_contents, nbyte);
@@ -365,13 +355,13 @@ int fs_read(int desc, void *buf, size_t nbyte) {
       return bytes_read;
     }
 
-    memset(block_contents, -1, 4096);
+    memset(block_contents, -1, MAX_BLOCK_SIZE);
     if (block_read(file_block, block_contents) < 0) {
       printf("Error: Could not read from block %d\n", file_block);
       return -1;
     }
 
-    for (i = 0; i < 4096; i++) {
+    for (i = 0; i < MAX_BLOCK_SIZE; i++) {
       if (block_contents[i] == -1) {
         memcpy(buf, read_contents, nbyte);
         return bytes_read;
@@ -406,15 +396,15 @@ int fs_write(int desc, void *buf, size_t nbyte) {
     }
   }
 
-  if (nbyte + DIR[desc_dir].size > 16777216) {
-    nbyte = 16777216 - DIR[desc_dir].size;
+  if (nbyte + DIR[desc_dir].size > MAX_FILE_SIZE) {
+    nbyte = MAX_FILE_SIZE - DIR[desc_dir].size;
   }
 
   int file_off = fildes[desc].offset;
   int file_block = fildes[desc].file; // starts at head
 
-  while (file_off > 4096) { // moves offset up blocks if need be
-    file_off -= 4096; // gets offset for that block
+  while (file_off > MAX_BLOCK_SIZE) { // moves offset up blocks if need be
+    file_off -= MAX_BLOCK_SIZE; // gets offset for that block
     file_block = FAT[file_block]; // grabs next block
   }
 
@@ -440,7 +430,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
     DIR[desc_dir].size += nbyte; // increments size of file in directory entry
   }
 
-  char block_contents[4096];
+  char block_contents[MAX_BLOCK_SIZE];
   if (block_read(file_block, block_contents) < 0) {
     printf("Error: Could not read from block %d\n", file_block);
     return -1;
@@ -450,7 +440,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
   char write_contents[nbyte];
   memcpy(write_contents, buf, nbyte);
 
-  for (i = file_off; i < 4096; i++) {
+  for (i = file_off; i < MAX_BLOCK_SIZE; i++) {
     block_contents[i] = write_contents[bytes_written];
     bytes_written++;
     fildes[desc].offset++;
@@ -464,7 +454,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
   bool new_block = false;
   while (nbyte < bytes_written) {
     if (new_block) {
-      DIR[desc_dir].size += 4096; // adds last block of size to file
+      DIR[desc_dir].size += MAX_BLOCK_SIZE; // adds last block of size to file
       new_block = false;
     }
     file_block = FAT[file_block]; // grabs next block
@@ -496,7 +486,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
       return -1;
     }
 
-    for (i = 0; i < 4096; i++) {
+    for (i = 0; i < MAX_BLOCK_SIZE; i++) {
       block_contents[i] = write_contents[bytes_written];
       bytes_written++;
       fildes[desc].offset++;
@@ -534,7 +524,7 @@ int fs_get_filesize(int desc) {
 }
 
 int fs_listfiles(char ***files) {
-  // int i, j, num_files = 0;
+  int i = 0;
 
   // for (i = 0; i < fs->dir_len; i++) {
   //   if (DIR[i].used == true) {
@@ -551,12 +541,13 @@ int fs_listfiles(char ***files) {
   // // char* list[num_files + 1];
   // // *files = list;
   //
-  // for (i = 0; i < num_files; i++) {
-  //   if (DIR[i].used == true) {
-  //     strcpy((*files)[j], DIR[i].name); //(*files)[j] = DIR[i].name;
-  //     j++;
-  //   }
-  // }
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].used == true) {
+      // strcpy((*files)[j], DIR[i].name); //(*files)[j] = DIR[i].name;
+      // j++;
+      printf("\t%s\n", DIR[i].name);
+    }
+  }
   // (*files)[num_files] = NULL;
   return 0;
 }
@@ -607,7 +598,7 @@ int fs_truncate(int desc, off_t length) {
     fildes[desc].offset = length;
   }
 
-  int trunc_block = length / 4096;
+  int trunc_block = length / MAX_BLOCK_SIZE;
   trunc_block++;
 
   int curr_block = FAT[DIR[i].head];

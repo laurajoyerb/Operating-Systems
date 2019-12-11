@@ -1,7 +1,7 @@
 all: fs.o
 
 main: fs.o disk.o
-	gcc -o main -Wall -g $^ main.c
+	gcc -o main -Wall -Wno-unused-variable -g $^ main.c
 
 fs: fs.o disk.o
 	gcc -o $@ -Wall -g $^
