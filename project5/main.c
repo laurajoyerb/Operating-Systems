@@ -9,34 +9,48 @@ int main() {
   char* name1 = "name1";
   char* name2 = "newfilename1";
   char* name3 = "openfile1";
-  size_t nbyte = 10;
+  size_t nbyte = 1 * 1024 * 1024;
   void* buf[10];
-  char write_buf[10] = "123456789";
+  char write_buf[1 * 1024 * 1024];
+  memset(write_buf, 'a', 1 * 1024 * 1024);
   char** files;
   off_t offset = 0;
   int i;
 
   // make_fs(disk_name);
   mount_fs(disk_name);
+  fs_delete(name1);
 
-  // fs_create(name1);
+  fs_create(name1);
   // fs_create(name2);
   // fs_create(name3);
 
-  // int foo1 = fs_open(name1);
+  int foo1 = fs_open(name1);
   // int foo2 = fs_open(name2);
   // int foo3 = fs_open(name3);
   //
   // fs_lseek(foo1, offset);
   //
-  // fs_write(foo1, (void *) write_buf, nbyte);
-  //
+  int bytes = fs_write(foo1, (void *) write_buf, nbyte);
+  int size = fs_get_filesize(foo1);
+  printf("Wrote %d bytes, file size is now: %d\n", bytes, size);
+
+  bytes = fs_write(foo1, (void *) write_buf, nbyte);
+  size = fs_get_filesize(foo1);
+  printf("Wrote %d bytes, file size is now: %d\n", bytes, size);
+
+  if (fs_truncate(foo1, 15) < 0) {
+    printf("Could not truncate successfully\n");
+  }
+  size = fs_get_filesize(foo1);
+  printf("File size is: %d\n", size);
+
   // fs_lseek(foo1, offset);
   //
   // fs_read(foo1, buf, nbyte);
   // printf("Read: %s\n", (char*)buf);
   //
-  // fs_close(foo1);
+  fs_close(foo1);
   // fs_close(foo2);
   // fs_close(foo3);
 
@@ -46,7 +60,6 @@ int main() {
   fs_listfiles(&files);
 
   // printf("%s %s %s\n", files[0], files[1], files[2]);
-  // int i;
   // for (i = 0; i < 3; i++) {
   //   if (files[i] != NULL) {
   //     printf("%s\n", files[i]);

@@ -126,6 +126,16 @@ int mount_fs(char *disk_name) {
     return -1;
   }
 
+  for (i = 0; i < MAX_FILDES; i++) {
+    fildes[i].used = false;
+    fildes[i].file = -1;
+    fildes[i].offset = 0;
+  }
+
+  for (i = 0; i < 64; i++) {
+    DIR[i].ref_cnt = 0;
+  }
+
   printf("File system mounted\n");
 
   return 0;
@@ -252,7 +262,7 @@ int fs_create(char *name) {
       DIR[i].ref_cnt = 0;
       printf("Created a file:\n");
       printf("\tName: %s\n", DIR[i].name);
-      printf("\tSize: %d blocks\n", DIR[i].size);
+      printf("\tSize: %d bytes\n", DIR[i].size);
       printf("\tHead: Block %d\n", DIR[i].head);
       printf("\tRef Count: %d\n", DIR[i].ref_cnt);
       fs->dir_len++;
@@ -545,7 +555,11 @@ int fs_listfiles(char ***files) {
     if (DIR[i].used == true) {
       // strcpy((*files)[j], DIR[i].name); //(*files)[j] = DIR[i].name;
       // j++;
-      printf("\t%s\n", DIR[i].name);
+      printf("File: %s\n", DIR[i].name);
+      printf("\tName: %s\n", DIR[i].name);
+      printf("\tSize: %d bytes\n", DIR[i].size);
+      printf("\tHead: Block %d\n", DIR[i].head);
+      printf("\tRef Count: %d\n", DIR[i].ref_cnt);
     }
   }
   // (*files)[num_files] = NULL;
