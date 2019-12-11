@@ -59,14 +59,13 @@ int main() {
   printf("Files are:\n");
   fs_listfiles(&files);
 
-  // printf("%s %s %s\n", files[0], files[1], files[2]);
-  // for (i = 0; i < 3; i++) {
-  //   if (files[i] != NULL) {
-  //     printf("%s\n", files[i]);
-  //   } else {
-  //     break;
-  //   }
-  // }
+  for (i = 0; i < 64; i++) {
+    if (files[i] != NULL) {
+      printf("File: %s\n", files[i]);
+    } else {
+      break;
+    }
+  }
 
   umount_fs(disk_name);
   return 0;

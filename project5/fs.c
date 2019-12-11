@@ -538,35 +538,19 @@ int fs_get_filesize(int desc) {
 }
 
 int fs_listfiles(char ***files) {
-  int i = 0;
+  int i, j = 0;
 
-  // for (i = 0; i < fs->dir_len; i++) {
-  //   if (DIR[i].used == true) {
-  //     num_files++;
-  //   }
-  // }
-  //
-  // *files = malloc(sizeof(char*) * (num_files + 1));
-  //
-  // for (i = 0; i < num_files; i++) {
-  //   (*files)[i] = malloc(sizeof(char) * (MAX_F_NAME + 1));
-  // }
-  //
-  // // char* list[num_files + 1];
-  // // *files = list;
-  //
+  char* files_list[64] = {"0"};
+
   for (i = 0; i < 64; i++) {
     if (DIR[i].used == true) {
-      // strcpy((*files)[j], DIR[i].name); //(*files)[j] = DIR[i].name;
-      // j++;
-      printf("File: %s\n", DIR[i].name);
-      printf("\tName: %s\n", DIR[i].name);
-      printf("\tSize: %d bytes\n", DIR[i].size);
-      printf("\tHead: Block %d\n", DIR[i].head);
-      printf("\tRef Count: %d\n", DIR[i].ref_cnt);
+      files_list[j] = DIR[i].name;
+      j++;
     }
   }
-  // (*files)[num_files] = NULL;
+  files_list[j] = NULL;
+
+  *files = files_list;
   return 0;
 }
 
