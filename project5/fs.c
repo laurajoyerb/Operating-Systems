@@ -56,14 +56,14 @@ int make_fs(char *disk_name) {
   mounted = true;
 
   fs = calloc(1, sizeof(struct super_block));
-  FAT = calloc(4096, sizeof(short int));
+  FAT = calloc(8192, sizeof(short int));
   DIR = calloc(64, sizeof(struct dir_entry));
 
   fs->fat_idx = 1;
-  fs->fat_len = 2;
-  fs->dir_idx = 3;
+  fs->fat_len = 4;
+  fs->dir_idx = 5;
   fs->dir_len = 0;
-  fs->data_idx = 4;
+  fs->data_idx = 6;
 
   // reserved blocks
   FAT[0] = -3; // super block
@@ -72,7 +72,7 @@ int make_fs(char *disk_name) {
   FAT[3] = -3; // DIR
 
   int i;
-  for (i = 4; i < 4096; i++) {
+  for (i = 4; i < 8192; i++) {
     FAT[i] = -2; // free
   }
 
@@ -80,7 +80,7 @@ int make_fs(char *disk_name) {
     return -1;
   }
 
-  for (i = 0; i < 2; i++) {
+  for (i = 0; i < fs->fat_len; i++) {
     if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
       return -1;
     }
@@ -108,7 +108,7 @@ int mount_fs(char *disk_name) {
   mounted = true;
 
   fs = calloc(1, sizeof(struct super_block));
-  FAT = calloc(4096, sizeof(int));
+  FAT = calloc(8192, sizeof(int));
   DIR = calloc(64, sizeof(struct dir_entry));
 
   if (block_read(0, (char*) fs) < 0) {
@@ -116,7 +116,7 @@ int mount_fs(char *disk_name) {
   }
 
   int i;
-  for (i = 0; i < 2; i++) {
+  for (i = 0; i < fs->fat_len; i++) {
     if (block_read(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
       return -1;
     }
@@ -138,7 +138,7 @@ int umount_fs(char *disk_name) {
   }
 
   int i;
-  for (i = 0; i < 2; i++) {
+  for (i = 0; i < fs->fat_len; i++) {
     if (block_write(fs->fat_idx + i, (char*) (FAT + i*2048)) < 0) {
       return -1;
     }
@@ -204,7 +204,7 @@ int fs_close(int desc) {
 }
 
 int fs_create(char *name) {
-  if (strlen(name) > 15) {
+  if (strlen(name) > 16) {
     printf("Error: File name too long\n");
     return -1;
   }
@@ -228,7 +228,7 @@ int fs_create(char *name) {
 
   // finds next available block in FAT and marks with eof
   int first_block = -1;
-  for (i = fs->data_idx; i < 4096; i++) {
+  for (i = fs->data_idx; i < 8192; i++) {
     if (FAT[i] == -2) { // checks if free
       first_block = i;
       FAT[i] = -1; // eof
@@ -412,7 +412,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
     // empty file, must allocate another block on FAT
     // finds next available block in FAT and marks with eof
     int first_block = -1;
-    for (i = fs->data_idx; i < 4096; i++) {
+    for (i = fs->data_idx; i < 8192; i++) {
       if (FAT[i] == -2) { // checks if free
         first_block = i;
         FAT[i] = -1; // eof
@@ -463,7 +463,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
       // empty file, must allocate another block on FAT
       // finds next available block in FAT and marks with eof
       int first_block = -1;
-      for (i = fs->data_idx; i < 4096; i++) {
+      for (i = fs->data_idx; i < 8192; i++) {
         if (FAT[i] == -2) { // checks if free
           first_block = i;
           FAT[i] = -1; // eof
