@@ -443,10 +443,58 @@ int fs_listfiles(char ***files) {
   return 0;
 }
 
-int fs_lseek(int fildes, off_t offset) {
+int fs_lseek(int desc, off_t offset) {
+  if (offset > 4096 || offset < 0) {
+    printf("Error: Offset is out of bounds for block\n");
+    return -1;
+  }
+
+  if (fildes[desc].used == false) {
+    printf("Error: Not a valid file descriptor\n");
+    return -1;
+  }
+
+  fildes[desc].offset = offset;
+  printf("New offset for file %d is %d\n", desc, fildes[desc].offset);
   return 0;
 }
 
-int fs_truncate(int fildes, off_t length) {
+int fs_truncate(int desc, off_t length) {
+  if (fildes[desc].used == false) {
+    return -1;
+  }
+
+  int i, desc_dir = -1;
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].head == fildes[desc].file) {
+      desc_dir = i;
+    }
+  }
+
+  if (desc_dir < 0) {
+    printf("Error: File could not be found in directory\n");
+    return -1;
+  }
+
+  if (DIR[i].size < length) {
+    return -1;
+  }
+
+  if (DIR[i].size == length) {
+    return 0;
+  }
+
+  DIR[i].size = length;
+  int trunc_block = length / 4096;
+  trunc_block++;
+
+  int curr_block = FAT[DIR[i].head];
+
+  for (i = 0; i < trunc_block; i++) {
+    curr_block = FAT[curr_block];
+  }
+
+  FAT[curr_block] = -1; // eof
+
   return 0;
 }
