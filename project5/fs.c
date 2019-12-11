@@ -357,7 +357,7 @@ int fs_read(int desc, void *buf, size_t nbyte) {
       return bytes_read;
     }
   }
-  while(nbyte < bytes_read) {
+  while(nbyte > bytes_read) {
     // more than one block to read
     file_block = FAT[file_block];
     if (file_block == -1) {
@@ -437,7 +437,11 @@ int fs_write(int desc, void *buf, size_t nbyte) {
 
     FAT[file_block] = first_block;
     FAT[first_block] = -1; // new eof
-    DIR[desc_dir].size += nbyte; // increments size of file in directory entry
+    if (nbyte < MAX_BLOCK_SIZE) {
+      DIR[desc_dir].size += nbyte;
+    } else {
+      DIR[desc_dir].size += MAX_BLOCK_SIZE; // increments size of file in directory entry
+    }
   }
 
   char block_contents[MAX_BLOCK_SIZE];
@@ -462,7 +466,7 @@ int fs_write(int desc, void *buf, size_t nbyte) {
   }
 
   bool new_block = false;
-  while (nbyte < bytes_written) {
+  while (nbyte > bytes_written) {
     if (new_block) {
       DIR[desc_dir].size += MAX_BLOCK_SIZE; // adds last block of size to file
       new_block = false;
