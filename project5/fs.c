@@ -3,6 +3,7 @@
 #include <string.h>
 #include <stdbool.h>
 #include "disk.h"
+#include "fs.h"
 
 #define MAX_F_NAME 15
 #define MAX_FILDES 32
@@ -315,6 +316,10 @@ int fs_read(int desc, void *buf, size_t nbyte) {
   int file_off = fildes[desc].offset;
   int file_block = fildes[desc].file; // starts at head
 
+  if (file_off == fs_get_filesize(desc)) {
+    return 0;
+  }
+
   while (file_off >= 4096) { // moves offset up blocks if need be
     file_off -= 4096; // gets offset for that block
     file_block = FAT[file_block]; // grabs next block
@@ -393,16 +398,46 @@ int fs_write(int desc, void *buf, size_t nbyte) {
     return -1;
   }
 
+  int i, desc_dir;
+  for (i = 0; i < 64; i++) {
+    if (DIR[i].head == fildes[desc].file) {
+      desc_dir = i;
+      break;
+    }
+  }
+
+  if (nbyte + DIR[desc_dir].size > 16777216) {
+    nbyte = 16777216 - DIR[desc_dir].size;
+  }
+
   int file_off = fildes[desc].offset;
   int file_block = fildes[desc].file; // starts at head
 
   while (file_off > 4096) { // moves offset up blocks if need be
     file_off -= 4096; // gets offset for that block
     file_block = FAT[file_block]; // grabs next block
-    if (file_block == -1) {
-      // has reached end of file, eof is found before offset is less than block size
-      return 0;
+  }
+
+  if (FAT[file_block] == -1) {
+    // empty file, must allocate another block on FAT
+    // finds next available block in FAT and marks with eof
+    int first_block = -1;
+    for (i = fs->data_idx; i < 4096; i++) {
+      if (FAT[i] == -2) { // checks if free
+        first_block = i;
+        FAT[i] = -1; // eof
+        break;
+      }
     }
+
+    if (first_block == -1) {
+      printf("Error: No more memory available\n");
+      return -1;
+    }
+
+    FAT[file_block] = first_block;
+    FAT[first_block] = -1; // new eof
+    DIR[desc_dir].size += nbyte; // increments size of file in directory entry
   }
 
   char block_contents[4096];
@@ -413,7 +448,6 @@ int fs_write(int desc, void *buf, size_t nbyte) {
 
   int bytes_written = 0;
   char write_contents[nbyte];
-  int i;
   memcpy(write_contents, buf, nbyte);
 
   for (i = file_off; i < nbyte; i++) {
