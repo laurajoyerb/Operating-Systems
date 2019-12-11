@@ -4,18 +4,22 @@
 #include "fs.h"
 #include "disk.h"
 
+// void testcase7a(int desc) {
+//   fs_lseek(desc, offset);
+// }
+
 int main() {
   char* disk_name = "mydisk";
   char* name1 = "name1";
   char* name2 = "newfilename1";
   char* name3 = "openfile1";
   size_t nbyte = 10;
-  void* buf = malloc(sizeof(void*) * 4096);
-  void* write_buf = malloc(sizeof(void*) * 4096);
-  memcpy(write_buf, "hey", nbyte);
-  char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
+  void* buf[10];
+  char write_buf[10] = "123456789"; //malloc(sizeof(void*) * 4096);
+  // memcpy(write_buf, "hey", nbyte);
+  // char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
   off_t offset = 0;
-  off_t length = 10;
+  // off_t length = 15;
 
   // make_fs(disk_name);
   mount_fs(disk_name);
@@ -29,20 +33,21 @@ int main() {
 
   fs_lseek(foo1, offset);
 
-  fs_write(foo1, buf, nbyte);
+  fs_write(foo1, (void *) write_buf, nbyte);
 
   fs_lseek(foo1, offset);
 
   fs_read(foo1, buf, nbyte);
+  printf("Read: %s\n", (char*)buf);
 
   fs_close(foo1);
   fs_close(foo2);
   fs_close(foo3);
 
-  fs_truncate(foo1, length);
+  // fs_truncate(foo1, length);
 
-  printf("Files are:\n");
-  fs_listfiles(&files);
+  // printf("Files are:\n");
+  // fs_listfiles(&files);
 
   umount_fs(disk_name);
   //
