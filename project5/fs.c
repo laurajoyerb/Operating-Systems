@@ -450,16 +450,66 @@ int fs_write(int desc, void *buf, size_t nbyte) {
   char write_contents[nbyte];
   memcpy(write_contents, buf, nbyte);
 
-  for (i = file_off; i < nbyte; i++) {
-    // reaches end of block
-    if (i >= 4096) {
-      block_write(file_block, block_contents);
-      return bytes_written;
-    }
-
+  for (i = file_off; i < 4096; i++) {
     block_contents[i] = write_contents[bytes_written];
     bytes_written++;
     fildes[desc].offset++;
+
+    if (nbyte == bytes_written) {
+      block_write(file_block, block_contents);
+      return bytes_written;
+    }
+  }
+
+  bool new_block = false;
+  while (nbyte < bytes_written) {
+    if (new_block) {
+      DIR[desc_dir].size += 4096; // adds last block of size to file
+      new_block = false;
+    }
+    file_block = FAT[file_block]; // grabs next block
+
+    if (FAT[file_block] == -1) {
+      // empty file, must allocate another block on FAT
+      // finds next available block in FAT and marks with eof
+      int first_block = -1;
+      for (i = fs->data_idx; i < 4096; i++) {
+        if (FAT[i] == -2) { // checks if free
+          first_block = i;
+          FAT[i] = -1; // eof
+          break;
+        }
+      }
+
+      if (first_block == -1) {
+        printf("Error: No more memory available\n");
+        return -1;
+      }
+
+      FAT[file_block] = first_block;
+      FAT[first_block] = -1; // new eof
+      new_block = true;
+    }
+
+    if (block_read(file_block, block_contents) < 0) {
+      printf("Error: Could not read from block %d\n", file_block);
+      return -1;
+    }
+
+    for (i = 0; i < 4096; i++) {
+      block_contents[i] = write_contents[bytes_written];
+      bytes_written++;
+      fildes[desc].offset++;
+
+      if (nbyte == bytes_written) {
+        block_write(file_block, block_contents);
+        if (new_block) {
+          DIR[desc_dir].size += (i + 1);
+        }
+        return bytes_written;
+      }
+    }
+
   }
 
   block_write(file_block, block_contents);

@@ -4,7 +4,7 @@
 #include "fs.h"
 #include "disk.h"
 
-// void testcase7a(int desc) {
+// void testcase7g (int desc) {
 //   fs_lseek(desc, offset);
 // }
 
