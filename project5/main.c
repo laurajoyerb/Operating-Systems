@@ -4,10 +4,6 @@
 #include "fs.h"
 #include "disk.h"
 
-// void testcase7g (int desc) {
-//   fs_lseek(desc, offset);
-// }
-
 int main() {
   char* disk_name = "mydisk";
   char* name1 = "name1";
@@ -19,7 +15,6 @@ int main() {
   // memcpy(write_buf, "hey", nbyte);
   // char** files; // = NULL; //malloc(sizeof(char) * 15 * 64);
   off_t offset = 0;
-  // off_t length = 15;
 
   // make_fs(disk_name);
   mount_fs(disk_name);

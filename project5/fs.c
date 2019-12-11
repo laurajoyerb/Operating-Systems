@@ -616,6 +616,12 @@ int fs_truncate(int desc, off_t length) {
     curr_block = FAT[curr_block];
   }
 
+  int erase_block = FAT[curr_block];
   FAT[curr_block] = -1; // eof
+
+  while (erase_block != -1) {
+    erase_block = FAT[erase_block];
+    FAT[erase_block] = -2; // frees block
+  }
   return 0;
 }
