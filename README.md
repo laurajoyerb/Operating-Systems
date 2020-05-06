@@ -4,12 +4,12 @@ taught by Professor Manuel Egele
 
 This repo is a collection of all projects completed for the Operating Systems course at Boston University. 
 
-### Project 1 - Simple Shell
+### [Project 1](./project1) - Simple Shell
 The goal of this project was to implement a basic shell which is able to execute commands, redirect the
 standard input/output (stdin/stdout) of commands to files, pipe the output of commands to other
 commands, and carry out commands in the background.
 
-### Project 2 - User Mode Thread Library
+### [Project 2](./project2) - User Mode Thread Library
 The main deliverable for this project was a basic thread system for Linux. In the lectures, we
 learned that threads are independent units of execution that run (virtually) in parallel in the
 address space of a single process. As a result, they share the same heap memory, open files
@@ -18,12 +18,12 @@ of CPU registers and a stack. The thread subsystem provides a set of library fun
 applications may use to create, start and terminate threads, and manipulate them in various
 ways.
 
-### Project 3 - Thread Synchronization
+### [Project 3](./project3) - Thread Synchronization
 In Project 2, we implemented a basic threading library that enables a developer to create and
 perform computations in multiple threads. In this Project, we extended the library to
 facilitate communication between threads. This included adding support for a locking mechanism, the pthread_join POSIX thread function, and semaphores.
 
-### Project 4 - Thread Local Storage
+### [Project 4](./project4) - Thread Local Storage
 The goal of this project was to implement a library that provides protected memory regions for
 threads, which they can safely use as local storage. All threads share the
 same memory address space. While it can be beneficial since it allows threads to easily share
@@ -33,7 +33,7 @@ threads, it would be convenient for each thread to possess a protected storage a
 this thread can read from and write to. We call this protected storage area thread local
 storage. The task was to implement support for thread local storage on top of Linux' pthread implementation.
 
-### Project 5 - File System
+### [Project 5](./project5) - File System
 The goal of this project was to implement a simple file system on top of a virtual disk. To this end,
 we implemented a library that offers a set of basic file system calls (such as open, read,
 write, ...) to applications. The file data and file system meta-information will be stored on a
